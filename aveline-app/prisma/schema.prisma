@@ -1,0 +1,454 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  GUEST           // niet-ingelogde bezoeker (tijdelijke sessie)
+  B2C_CLIENT
+  B2B_CLIENT
+  MARKETING
+  CUSTOMER_SERVICE
+  ADMIN
+}
+
+enum ComplaintType {
+  MELT_DAMAGE       // smeltschade
+  BREAK_DAMAGE      // breukschade
+  TEXTURE_DEVIATION // afwijkende structuur
+  OTHER
+}
+
+enum ComplaintStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  REFUNDED
+}
+
+enum ComplaintPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum NotificationType {
+  COMPLAINT_UPDATE
+  NEW_PRODUCT
+  PROMOTION
+  BADGE_EARNED
+  COMMUNITY_REPLY
+  ORDER_UPDATE
+  STOCK_CHANGE
+  LIMITED_EDITION
+}
+
+enum ContentType {
+  RECIPE
+  TUTORIAL
+  PRODUCT_CARD
+}
+
+enum ContentStatus {
+  NEW
+  ACTIVE
+  OUTDATED
+  DRAFT
+}
+
+enum PromotionStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+}
+
+enum BadgeType {
+  FIRST_SCAN
+  FIRST_COMPLAINT
+  FIRST_POST
+  LOYAL_CUSTOMER
+  COMMUNITY_STAR
+  PRODUCT_EXPLORER
+}
+
+enum LocationType {
+  STORE
+  MARKET_STALL
+  WORKSHOP
+}
+
+enum AuditAction {
+  DELETE_POST
+  BLOCK_USER
+  HIGHLIGHT_POST
+}
+
+// ─── User & Company ───────────────────────────────────────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String?
+  firstName        String?
+  lastName         String?
+  role             Role      @default(B2C_CLIENT)
+  // Social login
+  socialId         String?
+  socialProvider   String?
+  // Gamification
+  points           Int       @default(0)
+  // Privacy (AVG)
+  privacySettings  Json?
+  companyId        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  company          Company?              @relation(fields: [companyId], references: [id])
+  scans            ProductScan[]
+  complaints       Complaint[]
+  orders           Order[]
+  notifications    Notification[]
+  communityPosts   CommunityPost[]
+  communityComments CommunityComment[]
+  badges           UserBadge[]
+  chatSessions     ChatSession[]
+  recommendations  Recommendation[]
+  crmNotes         CRMNote[]
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  kvkNumber String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  orders    Order[]
+}
+
+// ─── Product ──────────────────────────────────────────────────────────────────
+
+model Product {
+  id               String    @id @default(cuid())
+  name             String
+  description      String?
+  cacaoPercentage  Float?
+  origin           String?
+  ingredients      String[]
+  allergens        String[]
+  certifications   String[]  // Fairtrade, Rainforest Alliance, etc.
+  batchNumber      String?   @unique
+  qrCode           String?   @unique
+  barcode          String?   @unique
+  isLimitedEdition Boolean   @default(false)
+  isPremium        Boolean   @default(false)
+  releaseDate      DateTime?
+  imageUrl         String?
+  category         String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  scans            ProductScan[]
+  complaints       Complaint[]
+  orderItems       OrderItem[]
+  recommendations  Recommendation[]
+  contentItems     ContentItem[]
+}
+
+model ProductScan {
+  id        String   @id @default(cuid())
+  userId    String?  // null = guest scan
+  productId String
+  scannedAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+// ─── Complaints ───────────────────────────────────────────────────────────────
+
+model Complaint {
+  id              String            @id @default(cuid())
+  referenceNumber String            @unique @default(cuid())
+  userId          String
+  productId       String
+  type            ComplaintType
+  description     String
+  mediaUrls       String[]
+  status          ComplaintStatus   @default(NEW)
+  priority        ComplaintPriority @default(MEDIUM)
+  resolution      String?
+  assignedTo      String?           // customer service employee ID
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id])
+  product         Product           @relation(fields: [productId], references: [id])
+  statusHistory   ComplaintStatusHistory[]
+  crmNotes        CRMNote[]
+}
+
+model ComplaintStatusHistory {
+  id          String          @id @default(cuid())
+  complaintId String
+  status      ComplaintStatus
+  changedBy   String?
+  note        String?
+  changedAt   DateTime        @default(now())
+
+  complaint   Complaint       @relation(fields: [complaintId], references: [id])
+}
+
+// ─── Orders (B2B) ─────────────────────────────────────────────────────────────
+
+model Order {
+  id               String      @id @default(cuid())
+  orderNumber      String      @unique @default(cuid())
+  userId           String
+  companyId        String?
+  status           OrderStatus @default(PENDING)
+  deliveryAddress  String?
+  expectedDelivery DateTime?
+  totalAmount      Decimal?    @db.Decimal(10, 2)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  user             User        @relation(fields: [userId], references: [id])
+  company          Company?    @relation(fields: [companyId], references: [id])
+  items            OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  isRead    Boolean          @default(false)
+  deepLink  String?
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id])
+}
+
+// ─── Community ────────────────────────────────────────────────────────────────
+
+model CommunityPost {
+  id        String             @id @default(cuid())
+  userId    String
+  title     String?
+  content   String
+  imageUrls String[]
+  isHidden  Boolean            @default(false)
+  isPinned  Boolean            @default(false)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id])
+  comments  CommunityComment[]
+}
+
+model CommunityComment {
+  id        String        @id @default(cuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime      @default(now())
+
+  post      CommunityPost @relation(fields: [postId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
+}
+
+// ─── Badges & Gamification ────────────────────────────────────────────────────
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  imageUrl    String?
+  type        BadgeType   @unique
+
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeId  String
+  earnedAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  badge    Badge    @relation(fields: [badgeId], references: [id])
+
+  @@unique([userId, badgeId])
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+model ChatSession {
+  id            String        @id @default(cuid())
+  userId        String
+  assignedAgent String?
+  isActive      Boolean       @default(true)
+  summary       String?
+  rating        Int?          // 1–5 sterren (tevredenheidsbeoordeling)
+  createdAt     DateTime      @default(now())
+  closedAt      DateTime?
+
+  user          User          @relation(fields: [userId], references: [id])
+  messages      ChatMessage[]
+}
+
+model ChatMessage {
+  id         String      @id @default(cuid())
+  sessionId  String
+  senderType String      // "user" | "agent" | "bot"
+  senderId   String?
+  content    String
+  mediaUrls  String[]
+  createdAt  DateTime    @default(now())
+
+  session    ChatSession @relation(fields: [sessionId], references: [id])
+}
+
+// ─── Recommendations ──────────────────────────────────────────────────────────
+
+model Recommendation {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  score     Float    @default(0)
+  reason    String?
+  dismissed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+}
+
+// ─── Content (recepten, tutorials, productkaarten) ───────────────────────────
+
+model ContentItem {
+  id          String        @id @default(cuid())
+  type        ContentType
+  status      ContentStatus @default(NEW)
+  title       String
+  body        String?
+  imageUrl    String?
+  videoUrl    String?
+  difficulty  String?       // makkelijk / gemiddeld / moeilijk
+  flavor      String?       // smaakprofiel voor recepten
+  isPremium   Boolean       @default(false)
+  productId   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  product     Product?      @relation(fields: [productId], references: [id])
+}
+
+// ─── Promotions (marketing) ───────────────────────────────────────────────────
+
+model Promotion {
+  id            String          @id @default(cuid())
+  title         String
+  body          String
+  imageUrl      String?
+  discountCode  String?
+  targetSegment String?
+  status        PromotionStatus @default(DRAFT)
+  scheduledAt   DateTime?
+  sentAt        DateTime?
+  createdBy     String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+// ─── Planned Notifications (marketing) ───────────────────────────────────────
+
+model PlannedNotification {
+  id            String    @id @default(cuid())
+  title         String
+  body          String
+  targetSegment String?
+  scheduledAt   DateTime
+  sentAt        DateTime?
+  isCancelled   Boolean   @default(false)
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+}
+
+// ─── Locations (winkel- en eventzoeker) ──────────────────────────────────────
+
+model Location {
+  id           String       @id @default(cuid())
+  name         String
+  type         LocationType
+  address      String
+  latitude     Float
+  longitude    Float
+  phone        String?
+  openingHours Json?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+// ─── CRM Notes (klantenservice) ───────────────────────────────────────────────
+
+model CRMNote {
+  id          String     @id @default(cuid())
+  userId      String
+  complaintId String?
+  content     String
+  createdBy   String     // employee ID
+  createdAt   DateTime   @default(now())
+
+  user        User       @relation(fields: [userId], references: [id])
+  complaint   Complaint? @relation(fields: [complaintId], references: [id])
+}
+
+// ─── Audit Log (community moderatie) ─────────────────────────────────────────
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  action      AuditAction
+  targetId    String
+  targetType  String      // "post" | "user"
+  performedBy String      // employee ID
+  createdAt   DateTime    @default(now())
+}

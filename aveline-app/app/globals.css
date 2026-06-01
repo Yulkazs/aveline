@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+/* ─── Aveline Brand Tokens ─────────────────────────────────────────────────── */
+:root {
+  --background: #ffffff;
+  --foreground: #122A1A;
+
+  --color-aveline-light:   #BDD2B7;
+  --color-aveline-accent:  #51C675;
+  --color-aveline-primary: #304C3A;
+  --color-aveline-dark:    #122A1A;
+
+  --font-cormorant: var(--font-cormorant);
+  --font-dm-sans:   var(--font-dm-sans);
+}
+
+@theme inline {
+  --color-background:      var(--background);
+  --color-foreground:      var(--foreground);
+  --font-sans:             var(--font-dm-sans);
+  --font-display:          var(--font-cormorant);
+
+  --color-aveline-light:   var(--color-aveline-light);
+  --color-aveline-accent:  var(--color-aveline-accent);
+  --color-aveline-primary: var(--color-aveline-primary);
+  --color-aveline-dark:    var(--color-aveline-dark);
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #ffffff;
+  color: var(--foreground);
+  font-family: var(--font-dm-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Mobile Shell ──────────────────────────────────────────────────────────── */
+/* Full-height white card, centred on large screens                             */
+.mobile-shell {
+  height: 100dvh;          /* dynamic viewport — accounts for browser chrome   */
+  width: 100%;
+  max-width: 430px;
+  margin-inline: auto;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── Typography ────────────────────────────────────────────────────────────── */
+.font-display {
+  font-family: var(--font-cormorant), Georgia, serif;
+}
+
+/* ─── Buttons ───────────────────────────────────────────────────────────────── */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  border-radius: 9999px;
+  background-color: #304C3A;
+  color: #ffffff;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: background-color 150ms ease, transform 100ms ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.btn-primary:hover  { background-color: #253d2e; }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  color: #304C3A;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: background-color 150ms ease, transform 100ms ease;
+  cursor: pointer;
+  border: 1.5px solid #304C3A;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.btn-secondary:hover  { background-color: #f0f5f1; }
+.btn-secondary:active { transform: scale(0.98); }
+
+.btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: #304C3A;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+  text-decoration: none;
+}
+.btn-ghost:hover { opacity: 0.65; }
+
+/* ─── Input ─────────────────────────────────────────────────────────────────── */
+.input-field {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid #e4e4e4;
+  background: #fafafa;
+  color: #122A1A;
+  font-size: 0.9375rem;
+  font-family: var(--font-dm-sans), sans-serif;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.input-field::placeholder { color: #b0b8b4; }
+.input-field:focus {
+  border-color: #304C3A;
+  box-shadow: 0 0 0 3px rgba(48, 76, 58, 0.08);
+  background: #ffffff;
+}
+.input-field.error {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08);
+}
+
+/* ─── Divider ───────────────────────────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #b0b8b4;
+  font-size: 0.8125rem;
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e4e4e4;
+}
+
+/* ─── Animations ────────────────────────────────────────────────────────────── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.animate-fade-slide-up {
+  animation: fadeSlideUp 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
