@@ -1,15 +1,12 @@
-import { redirect, notFound } from "next/navigation";
+// app/dashboard/orders/page.tsx
+import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import BestelDetail from "@/components/dashboard/bestellingen/BestelDetail";
+import BestellingenClient from "@/components/dashboard/bestellingen/BestellingenClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function BestelDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function BestellingenPage() {
   const auth = await getAuth();
   if (!auth) redirect("/login");
 
@@ -24,10 +21,10 @@ export default async function BestelDetailPage({
     redirect("/dashboard");
   }
 
-  const { id } = await params;
+  const isAdmin = dbUser.role === "ADMIN";
 
-  const order = await prisma.order.findUnique({
-    where: { id },
+  const orders = await prisma.order.findMany({
+    where: isAdmin ? {} : { userId: auth.sub },
     include: {
       items: {
         include: {
@@ -37,26 +34,17 @@ export default async function BestelDetailPage({
               name: true,
               batchNumber: true,
               imageUrl: true,
-              cacaoPercentage: true,
-              origin: true,
             },
           },
         },
       },
     },
+    orderBy: { createdAt: "desc" },
   });
 
-  if (!order) notFound();
-
-  // B2B klant mag alleen zijn eigen orders zien
-  const isAdmin = dbUser.role === "ADMIN";
-  if (!isAdmin && order!.userId !== auth.sub) {
-    redirect("/dashboard/orders");
-  }
-
   return (
-    <BestelDetail
-      order={JSON.parse(JSON.stringify(order))}
+    <BestellingenClient
+      orders={JSON.parse(JSON.stringify(orders))}
     />
   );
 }
