@@ -23,8 +23,34 @@ export default async function DashboardPage() {
     case "B2C_CLIENT":
       return <DashboardB2C firstName={firstName} points={user.points} />;
 
-    case "B2B_CLIENT":
-      return <DashboardB2B firstName={firstName} />;
+    case "B2B_CLIENT": {
+      const recentOrders = await prisma.order.findMany({
+        where: { userId: auth.sub },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  batchNumber: true,
+                  imageUrl: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+      });
+
+      return (
+        <DashboardB2B
+          firstName={firstName}
+          recentOrders={JSON.parse(JSON.stringify(recentOrders))}
+        />
+      );
+    }
 
     case "CUSTOMER_SERVICE": {
       const [openComplaints, activeChats] = await Promise.all([
