@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuth } from "@/lib/auth";
+import { awardPoints } from "@/lib/gamification";
 
-type Params = { params: Promise<{ id: string }> };
-
-// ── GET /api/community/posts/[id] ─────────────────────────────────────────────
-// Returns a single post with full content and all comments.
-export async function GET(_req: NextRequest, { params }: Params) {
-  const { id } = await params;
-
-  const post = await prisma.communityPost.findUnique({
-    where: { id, isHidden: false },
+// ── GET /api/community/posts ──────────────────────────────────────────────────
+// Returns all visible posts, newest first, with author info and comment count.
+export async function GET() {
+  const posts = await prisma.communityPost.findMany({
+    where: { isHidden: false },
+    orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
     select: {
       id: true,
       title: true,
@@ -18,104 +16,59 @@ export async function GET(_req: NextRequest, { params }: Params) {
       imageUrls: true,
       isPinned: true,
       createdAt: true,
-      updatedAt: true,
       user: {
         select: { id: true, firstName: true, lastName: true },
       },
-      comments: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          content: true,
-          createdAt: true,
-          user: {
-            select: { id: true, firstName: true, lastName: true },
-          },
-        },
+      _count: {
+        select: { comments: true },
       },
-      _count: { select: { comments: true } },
     },
   });
 
-  if (!post) {
-    return NextResponse.json({ error: "Bericht niet gevonden" }, { status: 404 });
-  }
-
-  return NextResponse.json(post);
+  return NextResponse.json(posts);
 }
 
-// ── PATCH /api/community/posts/[id] ───────────────────────────────────────────
-// Edits the post's title and/or content. Only the author can edit.
-// Body: { title?: string; content?: string }
-export async function PATCH(req: NextRequest, { params }: Params) {
+// ── POST /api/community/posts ─────────────────────────────────────────────────
+// Creates a new post. Requires an authenticated session.
+// Body: { title?: string; content: string; imageUrls?: string[] }
+export async function POST(req: NextRequest) {
   const auth = await getAuth();
   if (!auth) {
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
   }
 
-  const { id } = await params;
-  const post = await prisma.communityPost.findUnique({
-    where: { id },
-    select: { userId: true },
-  });
-
-  if (!post) {
-    return NextResponse.json({ error: "Bericht niet gevonden" }, { status: 404 });
-  }
-  if (post.userId !== auth.sub) {
-    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
-  }
-
   const body = await req.json();
-  const { title, content } = body;
+  const { title, content, imageUrls } = body;
 
-  if (content !== undefined && content.trim().length === 0) {
+  if (!content || typeof content !== "string" || content.trim().length === 0) {
     return NextResponse.json(
       { error: "Inhoud mag niet leeg zijn" },
       { status: 400 }
     );
   }
 
-  const updated = await prisma.communityPost.update({
-    where: { id },
+  const post = await prisma.communityPost.create({
     data: {
-      ...(title !== undefined ? { title: title.trim() || null } : {}),
-      ...(content !== undefined ? { content: content.trim() } : {}),
+      userId: auth.sub,
+      title: title?.trim() || null,
+      content: content.trim(),
+      imageUrls: imageUrls ?? [],
     },
     select: {
       id: true,
       title: true,
       content: true,
       imageUrls: true,
-      updatedAt: true,
+      createdAt: true,
+      user: {
+        select: { id: true, firstName: true, lastName: true },
+      },
+      _count: { select: { comments: true } },
     },
   });
 
-  return NextResponse.json(updated);
-}
+  // Award points + badge (FIRST_POST, COMMUNITY_STAR) via shared gamification lib
+  await awardPoints(auth.sub, "COMMUNITY_POST");
 
-// ── DELETE /api/community/posts/[id] ──────────────────────────────────────────
-// Deletes the post. Only the author can delete.
-export async function DELETE(_req: NextRequest, { params }: Params) {
-  const auth = await getAuth();
-  if (!auth) {
-    return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const post = await prisma.communityPost.findUnique({
-    where: { id },
-    select: { userId: true },
-  });
-
-  if (!post) {
-    return NextResponse.json({ error: "Bericht niet gevonden" }, { status: 404 });
-  }
-  if (post.userId !== auth.sub) {
-    return NextResponse.json({ error: "Geen toegang" }, { status: 403 });
-  }
-
-  await prisma.communityPost.delete({ where: { id } });
-
-  return new NextResponse(null, { status: 204 });
+  return NextResponse.json(post, { status: 201 });
 }

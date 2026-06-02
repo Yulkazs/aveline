@@ -3,12 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { getAuth } from "@/lib/auth";
 import { awardPoints } from "@/lib/gamification";
 
-type Params = { params: Promise<{ id: string }> };
-
 // ── GET /api/community/posts/[id]/comments ────────────────────────────────────
-// Returns all comments for a post, oldest first.
-export async function GET(_req: NextRequest, { params }: Params) {
-  const { id } = await params;
+export async function GET(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id } = await context.params;
 
   const post = await prisma.communityPost.findUnique({
     where: { id, isHidden: false },
@@ -36,17 +36,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
 }
 
 // ── POST /api/community/posts/[id]/comments ───────────────────────────────────
-// Adds a comment to a post. Requires an authenticated session.
-// Body: { content: string }
-// Side-effect: sends a COMMUNITY_REPLY notification to the post author
-//              (unless the commenter is the author themselves).
-export async function POST(req: NextRequest, { params }: Params) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   const auth = await getAuth();
   if (!auth) {
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
   }
 
-  const { id: postId } = await params;
+  const { id: postId } = await context.params;
   const body = await req.json();
   const { content } = body;
 
@@ -66,7 +65,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Bericht niet gevonden" }, { status: 404 });
   }
 
-  // Fetch commenter's name for the notification message
   const commenter = await prisma.user.findUnique({
     where: { id: auth.sub },
     select: { firstName: true },
@@ -88,7 +86,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     },
   });
 
-  // Notify the post author — but not if they're replying to their own post
   if (post.userId !== auth.sub) {
     const commenterName = commenter?.firstName ?? "Iemand";
     await prisma.notification.create({
@@ -102,7 +99,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     });
   }
 
-  // Award points to the commenter
   await awardPoints(auth.sub, "COMMUNITY_REPLY");
 
   return NextResponse.json(comment, { status: 201 });
