@@ -5,9 +5,9 @@ export const dynamic = "force-dynamic";
 /**
  * /scan
  *
+ * Landing mode: shows scan info + CTA buttons before opening the camera.
  * Accessible by both guests and authenticated users.
- * Guests can scan and view product info but don't earn points.
  */
 export default function ScanRoute() {
-  return <ScanPage />;
+  return <ScanPage mode="landing" />;
 }

@@ -3,11 +3,11 @@ import ScanPage from "@/components/scan/ScanPage";
 export const dynamic = "force-dynamic";
 
 /**
- * /scan
+ * /dashboard/scan
  *
- * Accessible by both guests and authenticated users.
- * Guests can scan and view product info but don't earn points.
+ * Direct mode: opens the camera immediately, no welcome screen.
+ * Authenticated users only (enforced by dashboard layout/middleware).
  */
 export default function ScanRoute() {
-  return <ScanPage />;
+  return <ScanPage mode="direct" />;
 }

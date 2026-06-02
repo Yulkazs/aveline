@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Zap, ZapOff, ArrowRight } from "lucide-react";
+import { ChevronLeft, Zap, ZapOff, Globe, ShieldCheck, Star, ScanLine } from "lucide-react";
 import ScannerView from "./ScannerView";
 import ProductQuickview from "./ProductQuickview";
 
@@ -25,9 +25,15 @@ type GamificationResult = {
 
 type View = "welcome" | "scanning" | "result";
 
-export default function ScanPage() {
+type Props = {
+  /** "landing" → show info + CTA buttons first (used on /scan)
+   *  "direct"  → jump straight into scanner (used on /dashboard/scan) */
+  mode?: "landing" | "direct";
+};
+
+export default function ScanPage({ mode = "landing" }: Props) {
   const router = useRouter();
-  const [view, setView] = useState<View>("welcome");
+  const [view, setView] = useState<View>(mode === "direct" ? "scanning" : "welcome");
   const [torch, setTorch] = useState(false);
   const [scannedProduct, setScannedProduct] = useState<ScannedProduct | null>(null);
   const [gamification, setGamification] = useState<GamificationResult | null>(null);
@@ -49,7 +55,6 @@ export default function ScanPage() {
 
       if (!res.ok) {
         setError(data.message ?? "Product niet gevonden. Probeer opnieuw.");
-        // Stay in scanning view, let user retry
         return;
       }
 
@@ -70,19 +75,20 @@ export default function ScanPage() {
   }
 
   function handleBackToWelcome() {
-    setView("welcome");
-    setError(null);
-    setLastBarcode(null);
+    if (mode === "direct") {
+      router.back();
+    } else {
+      setView("welcome");
+      setError(null);
+      setLastBarcode(null);
+    }
   }
 
-  // ─── Welcome screen ──────────────────────────────────────────────────────
+  // ─── Welcome screen (only for mode="landing") ────────────────────────────
 
   if (view === "welcome") {
     return (
-      <div
-        className="flex flex-col h-full"
-        style={{ background: "#F5F8F5" }}
-      >
+      <div className="flex flex-col h-full" style={{ background: "#F5F8F5" }}>
         {/* Header */}
         <div className="flex items-center px-5 pt-14 pb-4">
           <button
@@ -99,19 +105,11 @@ export default function ScanPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6 pb-10">
-          {/* Icon */}
-          <div
-            className="w-24 h-24 rounded-3xl flex items-center justify-center text-5xl"
-            style={{ background: "#EFF5EE" }}
-          >
-            🍫
-          </div>
-
-          {/* Title + explanation */}
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-3" style={{ color: "#122A1A" }}>
-              Welkom bij Aveline
+        <div className="flex-1 flex flex-col px-6 pt-6 gap-6 pb-10 overflow-y-auto">
+          {/* Title */}
+          <div>
+            <h2 className="text-2xl font-bold mb-2" style={{ color: "#122A1A" }}>
+              Scan een product
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: "#6B7F73" }}>
               Scan de barcode of QR-code op de verpakking om herkomst,
@@ -121,16 +119,30 @@ export default function ScanPage() {
 
           {/* Benefits */}
           <div
-            className="w-full rounded-2xl p-4 flex flex-col gap-3"
+            className="w-full rounded-2xl p-4 flex flex-col gap-4"
             style={{ background: "#EFF5EE" }}
           >
             {[
-              { icon: "🌍", text: "Bekijk herkomst en cacaopercentage" },
-              { icon: "✅", text: "Controleer allergenen en ingrediënten" },
-              { icon: "🏅", text: "Verdien punten bij elk gescand product" },
+              {
+                icon: <Globe size={18} color="#304C3A" />,
+                text: "Bekijk herkomst en cacaopercentage",
+              },
+              {
+                icon: <ShieldCheck size={18} color="#304C3A" />,
+                text: "Controleer allergenen en ingrediënten",
+              },
+              {
+                icon: <Star size={18} color="#304C3A" />,
+                text: "Verdien punten bij elk gescand product",
+              },
             ].map(({ icon, text }) => (
               <div key={text} className="flex items-center gap-3">
-                <span className="text-xl">{icon}</span>
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: "rgba(48,76,58,0.1)" }}
+                >
+                  {icon}
+                </div>
                 <span className="text-sm font-medium" style={{ color: "#304C3A" }}>
                   {text}
                 </span>
@@ -139,19 +151,18 @@ export default function ScanPage() {
           </div>
 
           {/* CTA buttons */}
-          <div className="w-full flex flex-col gap-3">
+          <div className="flex flex-col gap-3 mt-auto">
             <button
               onClick={() => setView("scanning")}
               className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-base font-semibold transition-opacity active:opacity-80"
               style={{ background: "#304C3A", color: "#ffffff" }}
             >
-              <span className="text-xl">📷</span>
+              <ScanLine size={20} />
               Barcode scannen
-              <ArrowRight size={18} />
             </button>
 
             <button
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/recepten")}
               className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-base font-medium transition-opacity active:opacity-80"
               style={{ background: "#EFF5EE", color: "#304C3A" }}
             >
@@ -167,7 +178,7 @@ export default function ScanPage() {
     );
   }
 
-  // ─── Scanning screen ─────────────────────────────────────────────────────
+  // ─── Scanning / Result screen ─────────────────────────────────────────────
 
   return (
     <div className="flex flex-col h-full bg-black">
@@ -203,7 +214,7 @@ export default function ScanPage() {
         </button>
       </div>
 
-      {/* Camera / scanner — only active when in scanning view */}
+      {/* Camera / scanner */}
       <div className="flex-1 relative">
         <ScannerView
           active={view === "scanning"}
@@ -218,8 +229,10 @@ export default function ScanPage() {
         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)" }}
       >
         {error && (
-          <div className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl"
-            style={{ background: "rgba(220,38,38,0.85)" }}>
+          <div
+            className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl"
+            style={{ background: "rgba(220,38,38,0.85)" }}
+          >
             <span className="text-lg">⚠️</span>
             <p className="text-sm text-white flex-1">{error}</p>
             <button
@@ -232,12 +245,12 @@ export default function ScanPage() {
         )}
 
         {lastBarcode && !error && (
-          <div className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl"
-            style={{ background: "rgba(81,198,117,0.15)" }}>
+          <div
+            className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl"
+            style={{ background: "rgba(81,198,117,0.15)" }}
+          >
             <span className="text-lg">✅</span>
-            <p className="text-xs text-white font-mono truncate flex-1">
-              {lastBarcode}
-            </p>
+            <p className="text-xs text-white font-mono truncate flex-1">{lastBarcode}</p>
           </div>
         )}
 
@@ -246,7 +259,7 @@ export default function ScanPage() {
         </p>
 
         <button
-          onClick={handleBackToWelcome}
+          onClick={() => router.push("/recepten")}
           className="flex items-center gap-2 text-sm font-medium text-white px-4 py-2 rounded-full"
           style={{ background: "rgba(255,255,255,0.15)" }}
         >
@@ -254,7 +267,7 @@ export default function ScanPage() {
         </button>
       </div>
 
-      {/* Quickview sheet — shown when result is ready */}
+      {/* Quickview sheet */}
       {view === "result" && scannedProduct && (
         <ProductQuickview
           product={scannedProduct}
