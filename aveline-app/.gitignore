@@ -33,6 +33,8 @@ pnpm-debug.log*
 # Local SQLite database (if you're using sqlite)
 prisma/dev.db
 prisma/dev.db-journal
+generated/
+app/generated/*
 
 # Prisma generated client (optional depending on setup)
 node_modules/.prisma/

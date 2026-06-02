@@ -127,3 +127,13 @@ export type CRMNote = Prisma.CRMNoteModel
  * 
  */
 export type AuditLog = Prisma.AuditLogModel
+/**
+ * Model PresentationSession
+ * 
+ */
+export type PresentationSession = Prisma.PresentationSessionModel
+/**
+ * Model PresentationParticipant
+ * 
+ */
+export type PresentationParticipant = Prisma.PresentationParticipantModel

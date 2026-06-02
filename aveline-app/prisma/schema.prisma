@@ -102,6 +102,12 @@ enum AuditAction {
   HIGHLIGHT_POST
 }
 
+enum PresentationStatus {
+  WAITING
+  ACTIVE
+  ENDED
+}
+
 // ─── User & Company ───────────────────────────────────────────────────────────
 
 model User {
@@ -451,4 +457,25 @@ model AuditLog {
   targetType  String      // "post" | "user"
   performedBy String      // employee ID
   createdAt   DateTime    @default(now())
+}
+
+// ─── Presentation Sessions (demo) ────────────────────────────────────────────
+
+model PresentationSession {
+  id           String                   @id @default(cuid())
+  code         String                   @unique
+  status       PresentationStatus       @default(WAITING)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  participants PresentationParticipant[]
+}
+
+model PresentationParticipant {
+  id        String              @id @default(cuid())
+  sessionId String
+  username  String
+  createdAt DateTime            @default(now())
+
+  session   PresentationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }

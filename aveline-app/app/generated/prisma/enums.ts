@@ -131,3 +131,12 @@ export const AuditAction = {
 } as const
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction]
+
+
+export const PresentationStatus = {
+  WAITING: 'WAITING',
+  ACTIVE: 'ACTIVE',
+  ENDED: 'ENDED'
+} as const
+
+export type PresentationStatus = (typeof PresentationStatus)[keyof typeof PresentationStatus]

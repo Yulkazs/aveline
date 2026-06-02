@@ -72,7 +72,9 @@ export const ModelName = {
   PlannedNotification: 'PlannedNotification',
   Location: 'Location',
   CRMNote: 'CRMNote',
-  AuditLog: 'AuditLog'
+  AuditLog: 'AuditLog',
+  PresentationSession: 'PresentationSession',
+  PresentationParticipant: 'PresentationParticipant'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -405,6 +407,27 @@ export const AuditLogScalarFieldEnum = {
 } as const
 
 export type AuditLogScalarFieldEnum = (typeof AuditLogScalarFieldEnum)[keyof typeof AuditLogScalarFieldEnum]
+
+
+export const PresentationSessionScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PresentationSessionScalarFieldEnum = (typeof PresentationSessionScalarFieldEnum)[keyof typeof PresentationSessionScalarFieldEnum]
+
+
+export const PresentationParticipantScalarFieldEnum = {
+  id: 'id',
+  sessionId: 'sessionId',
+  username: 'username',
+  createdAt: 'createdAt'
+} as const
+
+export type PresentationParticipantScalarFieldEnum = (typeof PresentationParticipantScalarFieldEnum)[keyof typeof PresentationParticipantScalarFieldEnum]
 
 
 export const SortOrder = {
