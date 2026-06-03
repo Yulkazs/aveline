@@ -42,8 +42,6 @@ type Props = {
   sessionCode: string;
   openComplaints: number;
   activeChats: number;
-  complaints: Complaint[];
-  products: Product[];
 };
 
 // ── Role config ───────────────────────────────────────────────────────────────
@@ -161,8 +159,6 @@ export default function PresentatieDashboard({
   username,
   openComplaints,
   activeChats,
-  complaints,
-  products,
 }: Props) {
   const [role, setRole] = useState<DemoRole>("B2C_CLIENT");
 
