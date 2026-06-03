@@ -11,14 +11,18 @@ const NAV_ITEMS = [
   { label: "Inloggen", href: "/login",    icon: User     },
 ];
 
-// Pagina's waarop de gast-navbar NIET zichtbaar moet zijn
-const HIDDEN_ON = ["/", "/welcome", "/login", "/register"];
+// Pagina's en prefixes waarop de gast-navbar NIET zichtbaar moet zijn
+const HIDDEN_ON_EXACT   = ["/", "/welcome", "/login", "/register"];
+const HIDDEN_ON_PREFIX  = ["/dashboard", "/presentatie"];
 
 export default function GastNavbar() {
   const pathname = usePathname();
 
   // Verberg op exacte paden
-  if (HIDDEN_ON.includes(pathname)) return null;
+  if (HIDDEN_ON_EXACT.includes(pathname)) return null;
+
+  // Verberg op alle sub-routes van dashboard en presentatie
+  if (HIDDEN_ON_PREFIX.some((p) => pathname.startsWith(p))) return null;
 
   function isActive(href: string) {
     if (href === "/scan") return pathname === "/scan";

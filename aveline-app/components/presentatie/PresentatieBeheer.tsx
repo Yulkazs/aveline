@@ -125,9 +125,7 @@ function SessionCard({
   }
 
   const meta = STATUS_META[session.status];
-  const joinUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/presentatie/${session.code}`
-    : `/presentatie/${session.code}`;
+  const joinUrl = `${process.env.NEXT_PUBLIC_APP_URL}/presentatie/${session.code}`;
 
   return (
     <div

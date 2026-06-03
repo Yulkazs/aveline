@@ -202,14 +202,13 @@ export default function PresentatieDashboard({
           <DashboardB2C firstName={username} points={120} />
         )}
         {role === "B2B_CLIENT" && (
-          <DashboardB2B firstName={username} />
+          <DashboardB2B firstName={username} recentOrders={[]} />
         )}
         {role === "CUSTOMER_SERVICE" && (
           <DashboardCustomerService
             firstName={username}
             openComplaints={openComplaints}
             activeChats={activeChats}
-            complaints={complaints}
           />
         )}
         {role === "MARKETING" && (

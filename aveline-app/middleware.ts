@@ -5,22 +5,67 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET ?? "aveline-dev-secret-change-in-production"
 );
 
-const PROTECTED = ["/dashboard"];
-const AUTH_ONLY = ["/login", "/register", "/welcome"];
-
-// Gast-routes: toegankelijk zonder account
+const PROTECTED   = ["/dashboard"];
+const AUTH_ONLY   = ["/login", "/register", "/welcome"];
 const GUEST_ROUTES = ["/scan", "/recepten", "/winkels"];
+
+// Presentatie-routes die volledig publiek zijn (geen enkele auth nodig)
+const PUBLIC_PRESENTATION = ["/presentatie"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Redirect old /home path to /dashboard
+  // ── Redirect /home → /dashboard ────────────────────────────────────────────
   if (pathname === "/home" || pathname.startsWith("/home/")) {
     const url = req.nextUrl.clone();
     url.pathname = pathname.replace(/^\/home/, "/dashboard");
     return NextResponse.redirect(url);
   }
 
+  // ── Gast-routes: altijd toegankelijk ───────────────────────────────────────
+  if (GUEST_ROUTES.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  // ── Presentatie join + wachtkamer: publiek ──────────────────────────────────
+  // /presentatie/[code]          → join pagina
+  // /presentatie/[code]/wachtkamer → wachtkamer
+  // Maar /presentatie/dashboard  → vereist presentatie-JWT (zie hieronder)
+  if (
+    pathname.startsWith("/presentatie/") &&
+    !pathname.startsWith("/presentatie/dashboard")
+  ) {
+    return NextResponse.next();
+  }
+
+  // ── Presentatie dashboard: vereist aveline_presentation_token ──────────────
+  if (pathname.startsWith("/presentatie/dashboard")) {
+    const presentationToken = req.cookies.get("aveline_presentation_token")?.value;
+
+    if (!presentationToken) {
+      // Geen token — stuur terug naar home
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+
+    try {
+      const { payload } = await jwtVerify(presentationToken, JWT_SECRET);
+      if (payload.role !== "PRESENTATION") throw new Error("Verkeerde rol");
+      return NextResponse.next();
+    } catch {
+      // Ongeldig token — cookie wissen en redirect
+      const res = NextResponse.redirect(new URL("/", req.url));
+      res.cookies.set("aveline_presentation_token", "", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 0,
+        path: "/",
+      });
+      return res;
+    }
+  }
+
+  // ── Normale aveline_token verificatie ───────────────────────────────────────
   const token = req.cookies.get("aveline_token")?.value;
   let isValid = false;
   let userId: string | null = null;
@@ -35,12 +80,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── Gast-routes zijn altijd toegankelijk — geen auth nodig ─────────────────
-  if (GUEST_ROUTES.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
-  }
-
-  // ── Als JWT geldig is, verifieer of de gebruiker nog bestaat in de DB ───────
+  // ── Verifieer of gebruiker nog bestaat in DB (alleen voor /dashboard) ───────
   if (isValid && userId && pathname.startsWith("/dashboard")) {
     try {
       const apiUrl = new URL("/api/auth/check-user", req.url);
@@ -66,7 +106,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── Beveilig /dashboard — redirect naar login als niet ingelogd ─────────────
+  // ── Beveilig /dashboard ─────────────────────────────────────────────────────
   if (PROTECTED.some((p) => pathname.startsWith(p)) && !isValid) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
@@ -93,5 +133,6 @@ export const config = {
     "/scan/:path*",
     "/recepten/:path*",
     "/winkels/:path*",
+    "/presentatie/:path*",   // ← nieuw
   ],
 };
