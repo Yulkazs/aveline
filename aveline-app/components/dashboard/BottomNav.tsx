@@ -14,6 +14,7 @@ import {
   BookOpen,
   Megaphone,
   AlertCircle,
+  Package,
 } from "lucide-react";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
@@ -41,12 +42,12 @@ const NAV_CONFIG: Record<UserRole, NavItem[]> = {
   ],
 
   B2C_CLIENT: [
-    { label: "Home",      href: "/dashboard",           icon: Home          },
-    { label: "Scan",      href: "/dashboard/scan",      icon: QrCode        },
-    { label: "Winkel",    href: "/dashboard/winkel",    icon: MapPin        },
-    { label: "Chat",      href: "/dashboard/chat",      icon: MessageCircle },
-    { label: "Community", href: "/dashboard/community", icon: Users         },
-    { label: "Profiel",   href: "/dashboard/profiel",   icon: User          },
+    { label: "Home",      href: "/dashboard",              icon: Home          },
+    { label: "Scan",      href: "/dashboard/scan",         icon: QrCode        },
+    { label: "Producten", href: "/dashboard/producten",    icon: Package       },
+    { label: "Chat",      href: "/dashboard/chat",         icon: MessageCircle },
+    { label: "Community", href: "/dashboard/community",    icon: Users         },
+    { label: "Profiel",   href: "/dashboard/profiel",      icon: User          },
   ],
 
   B2B_CLIENT: [
@@ -76,7 +77,7 @@ const NAV_CONFIG: Record<UserRole, NavItem[]> = {
     { label: "Profiel",   href: "/dashboard/profiel",   icon: User          },
   ],
 };
-   
+
 /* ─── Component ──────────────────────────────────────────────────────────── */
 export default function BottomNav({ role }: { role: UserRole }) {
   const pathname = usePathname();
