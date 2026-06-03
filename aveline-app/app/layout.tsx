@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import GastNavbar from "@/components/navigatie/GastNavbar";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({
       className={`${cormorant.variable} ${dmSans.variable} h-full`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
+      <GastNavbar />
     </html>
   );
 }
