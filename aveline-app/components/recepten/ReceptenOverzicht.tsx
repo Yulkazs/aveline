@@ -2,8 +2,16 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import { Search, SlidersHorizontal, Lock, Clock, ChefHat, Star, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Search,
+  SlidersHorizontal,
+  Lock,
+  Clock,
+  Star,
+  Loader2,
+  ChefHat,
+} from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface ReceptCard {
@@ -21,39 +29,37 @@ interface ReceptCard {
   teaser: string | null;
 }
 
-const SMAKEN = ["alle", "puur", "noot", "fruit", "citrus"];
+const SMAKEN = ["alle", "puur", "melk", "noot", "fruit", "citrus"];
 const MOEILIJKHEDEN = ["alle", "makkelijk", "gemiddeld", "moeilijk"];
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-const difficultyColor: Record<string, string> = {
-  makkelijk: "text-emerald-600 bg-emerald-50",
-  gemiddeld: "text-amber-700 bg-amber-50",
-  moeilijk: "text-rose-700 bg-rose-50",
+const difficultyClass: Record<string, string> = {
+  makkelijk: "tag-easy",
+  gemiddeld: "tag-med",
+  moeilijk:  "tag-hard",
+};
+const difficultyLabel: Record<string, string> = {
+  makkelijk: "Makkelijk",
+  gemiddeld: "Gemiddeld",
+  moeilijk:  "Moeilijk",
 };
 
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function ReceptenOverzicht() {
-  const [recepten, setRecepten] = useState<ReceptCard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [zoekterm, setZoekterm] = useState("");
-  const [smaak, setSmaak] = useState("alle");
-  const [moeilijkheid, setMoeilijkheid] = useState("alle");
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [recepten, setRecepten]           = useState<ReceptCard[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState(false);
+  const [zoekterm, setZoekterm]           = useState("");
+  const [smaak, setSmaak]                 = useState("alle");
+  const [moeilijkheid, setMoeilijkheid]   = useState("alle");
+  const [filterOpen, setFilterOpen]       = useState(false);
 
-  // Haal recepten op bij elke filterwijziging (debounce voor zoekterm)
-  useEffect(() => {
-    const timer = setTimeout(() => fetchRecepten(), zoekterm ? 350 : 0);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zoekterm, smaak, moeilijkheid]);
-
-  async function fetchRecepten() {
+  const fetchRecepten = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
       const params = new URLSearchParams();
-      if (zoekterm) params.set("zoek", zoekterm);
-      if (smaak !== "alle") params.set("smaak", smaak);
+      if (zoekterm)                params.set("zoek", zoekterm);
+      if (smaak !== "alle")        params.set("smaak", smaak);
       if (moeilijkheid !== "alle") params.set("moeilijkheid", moeilijkheid);
 
       const res = await fetch(`/api/recepten?${params.toString()}`);
@@ -65,46 +71,54 @@ export default function ReceptenOverzicht() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [zoekterm, smaak, moeilijkheid]);
 
-  const gefilterd = recepten;
+  useEffect(() => {
+    const timer = setTimeout(fetchRecepten, zoekterm ? 350 : 0);
+    return () => clearTimeout(timer);
+  }, [fetchRecepten, zoekterm]);
+
   const uitgelicht = recepten.find((r) => !r.isPremium);
 
   return (
-    <div className="recepten-page">
-      {/* ── Hero ───────────────────────────────────────────────────────────── */}
+    <div className="page">
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
       <header className="hero">
         <div className="hero-bg" />
         <div className="hero-content">
-          <p className="hero-eyebrow">Avéline Atelier</p>
+          <p className="eyebrow">Avéline Atelier</p>
           <h1 className="hero-title">
-            Recepten &<br />
-            <span className="hero-title-accent">Inspiratie</span>
+            Recepten &amp;<br />
+            <em className="hero-accent">Inspiratie</em>
           </h1>
           <p className="hero-desc">
-            Ontdek verfijnde bereidingen met onze ambachtelijke chocolades — van
-            snelle truffels tot meesterlijke taarten.
+            Ontdek verfijnde bereidingen met onze ambachtelijke chocolades —
+            van snelle truffels tot meesterlijke taarten.
           </p>
         </div>
+
         {uitgelicht && (
-          <div className="hero-feature-card">
-            <div className="hero-feature-img-wrap">
+          <div className="hero-feature">
+            <div className="feature-img-wrap">
               {uitgelicht.posterUrl && (
                 <Image
                   src={uitgelicht.posterUrl}
                   alt={uitgelicht.title}
                   fill
-                  className="hero-feature-img"
-                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="feature-img"
+                  sizes="(max-width: 480px) 140px, 200px"
                   priority
                 />
               )}
             </div>
-            <div className="hero-feature-label">
-              <span className="hero-feature-tag">Uitgelicht recept</span>
-              <h2 className="hero-feature-name">{uitgelicht.title}</h2>
-              <p className="hero-feature-sub">{uitgelicht.teaser}</p>
-              <Link href={`/recepten/${uitgelicht.slug}`} className="hero-cta">
+            <div className="feature-info">
+              <span className="feature-tag">Uitgelicht recept</span>
+              <h2 className="feature-name">{uitgelicht.title}</h2>
+              {uitgelicht.subtitle && (
+                <p className="feature-sub-italic">{uitgelicht.subtitle}</p>
+              )}
+              <p className="feature-teaser">{uitgelicht.teaser}</p>
+              <Link href={`/recepten/${uitgelicht.slug}`} className="feature-cta">
                 Bekijk recept
               </Link>
             </div>
@@ -112,10 +126,10 @@ export default function ReceptenOverzicht() {
         )}
       </header>
 
-      {/* ── Zoek & Filter ──────────────────────────────────────────────────── */}
-      <section className="filters-bar">
+      {/* ── Zoek & Filter ────────────────────────────────────────────── */}
+      <section className="search-bar">
         <div className="search-wrap">
-          <Search size={16} className="search-icon" />
+          <Search size={15} className="search-icon" />
           <input
             type="text"
             placeholder="Zoek recept of chocolade…"
@@ -125,161 +139,163 @@ export default function ReceptenOverzicht() {
           />
         </div>
         <button
-          className={`filter-toggle ${filterOpen ? "active" : ""}`}
+          className={`filter-btn ${filterOpen ? "active" : ""}`}
           onClick={() => setFilterOpen(!filterOpen)}
           aria-expanded={filterOpen}
         >
-          <SlidersHorizontal size={15} />
+          <SlidersHorizontal size={14} />
           Filters
         </button>
-
-        {filterOpen && (
-          <div className="filter-panel">
-            <fieldset className="filter-group">
-              <legend>Smaak</legend>
-              <div className="filter-pills">
-                {SMAKEN.map((s) => (
-                  <button
-                    key={s}
-                    className={`pill ${smaak === s ? "pill-active" : ""}`}
-                    onClick={() => setSmaak(s)}
-                  >
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className="filter-group">
-              <legend>Moeilijkheid</legend>
-              <div className="filter-pills">
-                {MOEILIJKHEDEN.map((m) => (
-                  <button
-                    key={m}
-                    className={`pill ${moeilijkheid === m ? "pill-active" : ""}`}
-                    onClick={() => setMoeilijkheid(m)}
-                  >
-                    {m.charAt(0).toUpperCase() + m.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          </div>
-        )}
       </section>
 
-      {/* ── Grid ───────────────────────────────────────────────────────────── */}
-      <main className="recepten-grid-section">
+      {filterOpen && (
+        <div className="filter-panel">
+          <fieldset className="filter-group">
+            <legend>Smaak</legend>
+            <div className="pills">
+              {SMAKEN.map((s) => (
+                <button
+                  key={s}
+                  className={`pill ${smaak === s ? "pill-on" : ""}`}
+                  onClick={() => setSmaak(s)}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="filter-group">
+            <legend>Moeilijkheid</legend>
+            <div className="pills">
+              {MOEILIJKHEDEN.map((m) => (
+                <button
+                  key={m}
+                  className={`pill ${moeilijkheid === m ? "pill-on" : ""}`}
+                  onClick={() => setMoeilijkheid(m)}
+                >
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        </div>
+      )}
+
+      {/* ── Resultaten ───────────────────────────────────────────────── */}
+      <main className="main">
         <p className="results-count">
-          {gefilterd.length} recept{gefilterd.length !== 1 ? "en" : ""} gevonden
+          {recepten.length} recept{recepten.length !== 1 ? "en" : ""} gevonden
         </p>
 
         {loading ? (
-          <div className="empty-state">
-            <Loader2 size={32} strokeWidth={1.2} className="spin" />
+          <div className="empty">
+            <Loader2 size={28} strokeWidth={1.2} className="spin" />
             <p>Recepten laden…</p>
           </div>
         ) : error ? (
-          <div className="empty-state">
-            <ChefHat size={40} strokeWidth={1.2} />
+          <div className="empty">
+            <ChefHat size={36} strokeWidth={1.2} />
             <p>Kon recepten niet laden. Probeer het later opnieuw.</p>
-            <button className="pill" onClick={fetchRecepten}>Opnieuw proberen</button>
+            <button className="pill" onClick={fetchRecepten}>
+              Opnieuw proberen
+            </button>
           </div>
-        ) : gefilterd.length === 0 ? (
-          <div className="empty-state">
-            <ChefHat size={40} strokeWidth={1.2} />
+        ) : recepten.length === 0 ? (
+          <div className="empty">
+            <ChefHat size={36} strokeWidth={1.2} />
             <p>Geen recepten gevonden voor deze zoekopdracht.</p>
           </div>
         ) : (
-          <ul className="recepten-grid">
-            {gefilterd.map((recept, i) => (
-              <li key={recept.id} className="recept-card" style={{ animationDelay: `${i * 60}ms` }}>
-                {recept.isPremium ? (
-                  /* Premium — niet klikbaar, toont registratie-prompt */
-                  <div className="card-inner premium">
+          <ul className="grid">
+            {recepten.map((r, i) =>
+              r.isPremium ? (
+                /* ── Premium kaart ── */
+                <li key={r.id} className="card-li" style={{ animationDelay: `${i * 55}ms` }}>
+                  <div className="card premium">
                     <div className="card-img-wrap">
-                      {recept.imageUrl && (
+                      {r.imageUrl && (
                         <Image
-                          src={recept.imageUrl}
-                          alt={recept.title}
+                          src={r.imageUrl}
+                          alt={r.title}
                           fill
-                          className="card-img"
-                          sizes="(max-width: 640px) 100vw, 33vw"
+                          className="card-img blurred"
+                          sizes="(max-width: 480px) 120px, 160px"
                         />
                       )}
-                      <div className="card-blur-overlay" />
-                      <div className="premium-badge">
-                        <Lock size={12} />
-                        Premium
-                      </div>
+                      <span className="prem-badge">
+                        <Lock size={10} /> Premium
+                      </span>
                     </div>
                     <div className="card-body">
-                      <span className={`difficulty-tag ${difficultyColor[recept.difficulty]}`}>
-                        {recept.difficulty}
+                      <span className={`diff-tag ${difficultyClass[r.difficulty] ?? ""}`}>
+                        {difficultyLabel[r.difficulty] ?? r.difficulty}
                       </span>
-                      <h3 className="card-title">{recept.title}</h3>
-                      <p className="card-sub">{recept.subtitle}</p>
-                      <p className="card-teaser">{recept.teaser}</p>
+                      <h3 className="card-title">{r.title}</h3>
+                      {r.subtitle && <p className="card-sub">{r.subtitle}</p>}
+                      <p className="card-teaser">{r.teaser}</p>
                       <div className="card-meta">
-                        <span><Clock size={12} /> {recept.duur} min</span>
-                        <span><Star size={12} /> {recept.product}</span>
+                        {r.duur   && <span><Clock size={11} /> {r.duur} min</span>}
+                        {r.product && <span><Star  size={11} /> {r.product}</span>}
                       </div>
-                      <Link href="/register" className="card-cta-premium">
+                      <Link href="/register" className="prem-cta">
                         Account aanmaken voor toegang
                       </Link>
                     </div>
                   </div>
-                ) : (
-                  /* Publiek recept */
-                  <Link href={`/recepten/${recept.slug}`} className="card-inner">
+                </li>
+              ) : (
+                /* ── Publiek recept ── */
+                <li key={r.id} className="card-li" style={{ animationDelay: `${i * 55}ms` }}>
+                  <Link href={`/recepten/${r.slug}`} className="card">
                     <div className="card-img-wrap">
-                      {recept.imageUrl && (
+                      {r.imageUrl && (
                         <Image
-                          src={recept.imageUrl}
-                          alt={recept.title}
+                          src={r.imageUrl}
+                          alt={r.title}
                           fill
                           className="card-img"
-                          sizes="(max-width: 640px) 100vw, 33vw"
+                          sizes="(max-width: 480px) 120px, 160px"
                         />
                       )}
-                      {recept.posterUrl && (
-                        <div className="card-hover-poster">
+                      {r.posterUrl && (
+                        <div className="poster-hover">
                           <Image
-                            src={recept.posterUrl}
+                            src={r.posterUrl}
                             alt=""
                             fill
                             className="card-img"
-                            sizes="(max-width: 640px) 100vw, 33vw"
+                            sizes="(max-width: 480px) 120px, 160px"
                           />
                         </div>
                       )}
                     </div>
                     <div className="card-body">
-                      <span className={`difficulty-tag ${difficultyColor[recept.difficulty]}`}>
-                        {recept.difficulty}
+                      <span className={`diff-tag ${difficultyClass[r.difficulty] ?? ""}`}>
+                        {difficultyLabel[r.difficulty] ?? r.difficulty}
                       </span>
-                      <h3 className="card-title">{recept.title}</h3>
-                      <p className="card-sub">{recept.subtitle}</p>
-                      <p className="card-teaser">{recept.teaser}</p>
+                      <h3 className="card-title">{r.title}</h3>
+                      {r.subtitle && <p className="card-sub">{r.subtitle}</p>}
+                      <p className="card-teaser">{r.teaser}</p>
                       <div className="card-meta">
-                        <span><Clock size={12} /> {recept.duur} min</span>
-                        <span><Star size={12} /> {recept.product}</span>
+                        {r.duur    && <span><Clock size={11} /> {r.duur} min</span>}
+                        {r.product && <span><Star  size={11} /> {r.product}</span>}
                       </div>
                       <span className="card-cta">Bekijk recept →</span>
                     </div>
                   </Link>
-                )}
-              </li>
-            ))}
+                </li>
+              )
+            )}
           </ul>
         )}
       </main>
 
-      {/* ── Premium banner ─────────────────────────────────────────────────── */}
-      <section className="premium-banner">
-        <div className="premium-banner-deco" />
-        <div className="premium-banner-content">
-          <Lock size={20} strokeWidth={1.5} />
-          <div>
+      {/* ── Premium banner ───────────────────────────────────────────── */}
+      <section className="banner">
+        <div className="banner-deco" />
+        <div className="banner-inner">
+          <Lock size={20} strokeWidth={1.5} className="banner-icon" />
+          <div className="banner-text">
             <h2>Ontgrendel alle premium recepten</h2>
             <p>
               Maak gratis een account aan en krijg toegang tot exclusieve
@@ -293,19 +309,20 @@ export default function ReceptenOverzicht() {
         </div>
       </section>
 
-      {/* ── Styles ─────────────────────────────────────────────────────────── */}
+      {/* ── Styles ───────────────────────────────────────────────────── */}
       <style jsx>{`
-        /* ── Design tokens ── */
-        .recepten-page {
-          --forest: #1c3a2a;
+        /* ─── Tokens ─────────────────────────────────────── */
+        .page {
+          --forest:     #1c3a2a;
           --forest-mid: #2a5040;
-          --gold: #c9a84c;
+          --gold:       #c9a84c;
           --gold-light: #e8d49a;
-          --cream: #f8f4ed;
+          --cream:      #f8f4ed;
           --warm-white: #fffdf8;
-          --text: #1a1a18;
-          --text-muted: #6b6255;
-          --radius: 2px;
+          --text:       #1a1a18;
+          --muted:      #6b6255;
+          --border:     #e0d5c5;
+          --sans: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
 
           background: var(--warm-white);
           color: var(--text);
@@ -313,550 +330,522 @@ export default function ReceptenOverzicht() {
           min-height: 100vh;
         }
 
-        /* ── Hero ── */
+        /* ─── Hero ─────────────────────────────────────────── */
         .hero {
-          position: relative;
           background: var(--forest);
-          padding: 80px 24px 0;
+          padding: 48px 20px 0;
+          position: relative;
           overflow: hidden;
+        }
+        .hero-bg {
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(ellipse at 80% -20%, #2e5c40 0%, transparent 55%),
+            radial-gradient(ellipse at 5%  110%, #0f2419 0%, transparent 50%);
+          pointer-events: none;
+        }
+        .hero-content { position: relative; padding-bottom: 32px; }
+
+        .eyebrow {
+          font-family: var(--sans);
+          font-size: 10px;
+          letter-spacing: 0.32em;
+          text-transform: uppercase;
+          color: var(--gold);
+          margin: 0 0 14px;
+        }
+        .hero-title {
+          font-size: clamp(2.2rem, 9vw, 3.5rem);
+          font-weight: 400;
+          line-height: 1.05;
+          color: var(--cream);
+          margin: 0 0 14px;
+        }
+        .hero-accent { color: var(--gold); font-style: italic; }
+        .hero-desc {
+          font-family: var(--sans);
+          font-size: 0.9rem;
+          color: rgba(248,244,237,0.7);
+          line-height: 1.65;
+          max-width: 340px;
+          margin: 0;
+        }
+
+        /* ─── Featured card (binnen hero) ─────────────────── */
+        .hero-feature {
+          position: relative;
+          margin: 28px -20px 0;
           display: grid;
-          grid-template-columns: 1fr;
-          gap: 0;
+          grid-template-columns: 140px 1fr;
+          background: var(--cream);
+          border-top: 1px solid rgba(201,168,76,0.3);
+          overflow: hidden;
+        }
+        @media (min-width: 480px) {
+          .hero-feature { grid-template-columns: 180px 1fr; }
         }
         @media (min-width: 768px) {
           .hero {
-            padding: 100px 60px 0;
+            padding: 80px 60px 0;
+            display: grid;
             grid-template-columns: 1fr 1fr;
             align-items: end;
             gap: 40px;
           }
-        }
-
-        .hero-bg {
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(ellipse at 70% 0%, #2e5c40 0%, transparent 60%),
-            radial-gradient(ellipse at 10% 100%, #0f2419 0%, transparent 50%);
-          pointer-events: none;
-        }
-        /* Subtle grain */
-        .hero-bg::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-          opacity: 0.3;
-        }
-
-        .hero-content {
-          position: relative;
-          padding-bottom: 48px;
-        }
-        .hero-eyebrow {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 11px;
-          letter-spacing: 0.3em;
-          text-transform: uppercase;
-          color: var(--gold);
-          margin: 0 0 20px;
-        }
-        .hero-title {
-          font-size: clamp(2.4rem, 6vw, 4.5rem);
-          font-weight: 400;
-          line-height: 1.05;
-          color: var(--cream);
-          margin: 0 0 20px;
-          letter-spacing: -0.01em;
-        }
-        .hero-title-accent {
-          color: var(--gold);
-          font-style: italic;
-        }
-        .hero-desc {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 1rem;
-          color: rgba(248, 244, 237, 0.7);
-          max-width: 400px;
-          line-height: 1.6;
-          margin: 0;
-        }
-
-        .hero-feature-card {
-          position: relative;
-          background: var(--cream);
-          display: grid;
-          grid-template-columns: 1fr;
-          overflow: hidden;
-          border-radius: var(--radius);
-          box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.4);
-        }
-        @media (min-width: 480px) {
-          .hero-feature-card {
-            grid-template-columns: 200px 1fr;
+          .hero-content { padding-bottom: 48px; }
+          .hero-feature {
+            margin: 0 0 0 0;    /* reset negative margin */
+            border-top: none;
+            border-left: none;
+            align-self: end;
+            box-shadow: 0 -20px 60px rgba(0,0,0,0.35);
           }
         }
-        .hero-feature-img-wrap {
+
+        .feature-img-wrap {
           position: relative;
-          height: 220px;
+          height: 160px;
         }
-        @media (min-width: 480px) {
-          .hero-feature-img-wrap {
-            height: 280px;
-          }
-        }
-        .hero-feature-img {
-          object-fit: cover;
-          object-position: center top;
-        }
-        .hero-feature-label {
-          padding: 28px 24px;
+        @media (min-width: 480px) { .feature-img-wrap { height: 190px; } }
+        @media (min-width: 768px) { .feature-img-wrap { height: 260px; } }
+        .feature-img { object-fit: cover; object-position: center top; }
+
+        .feature-info {
+          padding: 16px;
           display: flex;
           flex-direction: column;
           justify-content: center;
-          gap: 8px;
+          gap: 6px;
         }
-        .hero-feature-tag {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 10px;
-          letter-spacing: 0.25em;
+        @media (min-width: 768px) { .feature-info { padding: 28px 24px; gap: 8px; } }
+
+        .feature-tag {
+          font-family: var(--sans);
+          font-size: 9px;
+          letter-spacing: 0.22em;
           text-transform: uppercase;
           color: var(--gold);
-          background: rgba(201, 168, 76, 0.08);
-          border: 1px solid var(--gold-light);
-          padding: 3px 10px;
+          border: 1px solid rgba(201,168,76,0.4);
+          padding: 2px 8px;
+          display: inline-block;
           width: fit-content;
         }
-        .hero-feature-name {
-          font-size: 1.5rem;
+        .feature-name {
+          font-size: clamp(1rem, 3.5vw, 1.5rem);
           font-weight: 400;
           color: var(--forest);
           margin: 0;
+          line-height: 1.15;
         }
-        .hero-feature-sub {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.875rem;
-          color: var(--text-muted);
-          line-height: 1.5;
+        .feature-sub-italic {
+          font-family: var(--sans);
+          font-size: 0.78rem;
+          color: var(--gold);
+          font-style: italic;
+          margin: 0;
+        }
+        .feature-teaser {
+          font-family: var(--sans);
+          font-size: 0.78rem;
+          color: var(--muted);
+          line-height: 1.45;
           margin: 0;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        .hero-cta {
-          display: inline-block;
-          margin-top: 8px;
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.8rem;
-          letter-spacing: 0.12em;
+        .feature-cta {
+          font-family: var(--sans);
+          font-size: 0.72rem;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
           color: var(--forest);
-          border-bottom: 1px solid var(--forest);
-          padding-bottom: 2px;
           text-decoration: none;
+          border-bottom: 1px solid var(--forest);
+          padding-bottom: 1px;
           width: fit-content;
-          transition: color 0.2s, border-color 0.2s;
+          display: inline-block;
         }
-        .hero-cta:hover {
-          color: var(--gold);
-          border-color: var(--gold);
-        }
+        .feature-cta:hover { color: var(--gold); border-color: var(--gold); }
 
-        /* ── Filters ── */
-        .filters-bar {
-          padding: 28px 24px 0;
+        /* ─── Zoek & filter ────────────────────────────────── */
+        .search-bar {
+          padding: 20px 20px 0;
+          display: flex;
+          gap: 10px;
+          align-items: center;
           max-width: 1100px;
           margin: 0 auto;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          align-items: flex-start;
         }
-        @media (min-width: 768px) {
-          .filters-bar {
-            padding: 40px 60px 0;
-          }
-        }
-        .search-wrap {
-          flex: 1;
-          min-width: 220px;
-          position: relative;
-        }
+        @media (min-width: 768px) { .search-bar { padding: 36px 60px 0; } }
+
+        .search-wrap { flex: 1; position: relative; }
         .search-icon {
           position: absolute;
-          left: 12px;
+          left: 11px;
           top: 50%;
           transform: translateY(-50%);
-          color: var(--text-muted);
+          color: var(--muted);
         }
         .search-input {
           width: 100%;
-          padding: 10px 14px 10px 36px;
-          border: 1px solid #d9d0c3;
+          padding: 10px 12px 10px 34px;
+          border: 1px solid var(--border);
           background: var(--cream);
-          border-radius: var(--radius);
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.9rem;
+          font-family: var(--sans);
+          font-size: 0.88rem;
           color: var(--text);
           outline: none;
+          border-radius: 2px;
           transition: border-color 0.2s;
           box-sizing: border-box;
         }
-        .search-input:focus {
-          border-color: var(--forest);
-        }
-        .filter-toggle {
+        .search-input:focus { border-color: var(--forest); }
+        .search-input::placeholder { color: var(--muted); }
+
+        .filter-btn {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 10px 16px;
-          border: 1px solid #d9d0c3;
+          gap: 5px;
+          padding: 10px 14px;
+          border: 1px solid var(--border);
           background: var(--cream);
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.85rem;
+          font-family: var(--sans);
+          font-size: 0.82rem;
           color: var(--text);
           cursor: pointer;
-          border-radius: var(--radius);
-          transition: background 0.2s, border-color 0.2s;
+          border-radius: 2px;
           white-space: nowrap;
+          flex-shrink: 0;
+          transition: background 0.2s, border-color 0.2s;
         }
-        .filter-toggle.active,
-        .filter-toggle:hover {
-          background: var(--forest);
-          color: var(--cream);
-          border-color: var(--forest);
-        }
+        .filter-btn.active,
+        .filter-btn:hover { background: var(--forest); color: var(--cream); border-color: var(--forest); }
+
         .filter-panel {
-          width: 100%;
-          background: var(--cream);
-          border: 1px solid #d9d0c3;
-          border-radius: var(--radius);
-          padding: 20px 24px;
+          max-width: 1100px;
+          margin: 12px auto 0;
+          padding: 0 20px;
           display: flex;
           flex-wrap: wrap;
-          gap: 20px;
+          gap: 16px;
           animation: slideDown 0.2s ease;
         }
+        @media (min-width: 768px) { .filter-panel { padding: 0 60px; } }
         @keyframes slideDown {
           from { opacity: 0; transform: translateY(-6px); }
-          to { opacity: 1; transform: translateY(0); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        .filter-group {
-          border: none;
-          padding: 0;
-          margin: 0;
-        }
+        .filter-group { border: none; padding: 0; margin: 0; }
         .filter-group legend {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 10px;
-          letter-spacing: 0.2em;
+          font-family: var(--sans);
+          font-size: 9px;
+          letter-spacing: 0.22em;
           text-transform: uppercase;
-          color: var(--text-muted);
-          margin-bottom: 10px;
+          color: var(--muted);
+          margin-bottom: 8px;
         }
-        .filter-pills {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-        }
+        .pills { display: flex; flex-wrap: wrap; gap: 6px; }
         .pill {
-          padding: 5px 14px;
-          border: 1px solid #d9d0c3;
+          padding: 5px 12px;
+          border: 1px solid var(--border);
           background: white;
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.8rem;
-          color: var(--text-muted);
+          font-family: var(--sans);
+          font-size: 0.78rem;
+          color: var(--muted);
           cursor: pointer;
           border-radius: 999px;
           transition: all 0.15s;
         }
         .pill:hover { border-color: var(--forest); color: var(--forest); }
-        .pill-active {
-          background: var(--forest);
-          border-color: var(--forest);
-          color: var(--cream);
-        }
+        .pill-on { background: var(--forest); border-color: var(--forest); color: var(--cream); }
 
-        /* ── Grid ── */
-        .recepten-grid-section {
+        /* ─── Main / grid ──────────────────────────────────── */
+        .main {
           max-width: 1100px;
           margin: 0 auto;
-          padding: 32px 24px 60px;
+          padding: 16px 20px 60px;
         }
-        @media (min-width: 768px) {
-          .recepten-grid-section {
-            padding: 40px 60px 80px;
-          }
-        }
+        @media (min-width: 768px) { .main { padding: 28px 60px 80px; } }
+
         .results-count {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.8rem;
-          color: var(--text-muted);
-          letter-spacing: 0.05em;
-          margin: 0 0 24px;
+          font-family: var(--sans);
+          font-size: 0.75rem;
+          color: var(--muted);
+          letter-spacing: 0.04em;
+          margin: 0 0 14px;
         }
-        .empty-state {
+
+        .empty {
           text-align: center;
-          padding: 80px 24px;
-          color: var(--text-muted);
+          padding: 60px 24px;
+          color: var(--muted);
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 16px;
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
+          gap: 14px;
+          font-family: var(--sans);
+          font-size: 0.9rem;
         }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; }
-        .recepten-grid {
+
+        /* Grid: 1-kolom op mobiel, 2-kolom vanaf 600px, 3-kolom vanaf 960px */
+        .grid {
           list-style: none;
           padding: 0;
           margin: 0;
           display: grid;
           grid-template-columns: 1fr;
-          gap: 24px;
+          gap: 14px;
         }
         @media (min-width: 600px) {
-          .recepten-grid {
-            grid-template-columns: repeat(2, 1fr);
+          .grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        }
+        @media (min-width: 960px) {
+          .grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        }
+
+        /* ─── Kaart ────────────────────────────────────────── */
+        .card-li {
+          animation: fadeUp 0.35s ease both;
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Mobiel: horizontale layout (thumbnail links) */
+        .card {
+          display: grid;
+          grid-template-columns: 120px 1fr;
+          background: white;
+          border: 1px solid var(--border);
+          border-radius: 2px;
+          overflow: hidden;
+          text-decoration: none;
+          color: inherit;
+          height: 100%;
+          transition: box-shadow 0.22s, transform 0.22s;
+          -webkit-tap-highlight-color: transparent;
+        }
+        /* Vanaf 600px: verticale card layout */
+        @media (min-width: 600px) {
+          .card {
+            grid-template-columns: 1fr;
+            grid-template-rows: 200px 1fr;
           }
         }
         @media (min-width: 960px) {
-          .recepten-grid {
-            grid-template-columns: repeat(3, 1fr);
+          .card:not(.premium):hover {
+            box-shadow: 0 12px 40px rgba(28,58,42,0.12);
+            transform: translateY(-3px);
           }
-        }
-
-        /* ── Card ── */
-        .recept-card {
-          animation: fadeUp 0.4s ease both;
-        }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .card-inner {
-          display: block;
-          text-decoration: none;
-          color: inherit;
-          background: white;
-          border: 1px solid #e8e0d4;
-          border-radius: var(--radius);
-          overflow: hidden;
-          transition: box-shadow 0.25s, transform 0.25s;
-          height: 100%;
-        }
-        .card-inner:not(.premium):hover {
-          box-shadow: 0 12px 40px rgba(28, 58, 42, 0.12);
-          transform: translateY(-3px);
-        }
-        .card-inner:not(.premium):hover .card-hover-poster {
-          opacity: 1;
+          .card:not(.premium):hover .poster-hover { opacity: 1; }
         }
 
         .card-img-wrap {
           position: relative;
-          height: 220px;
           overflow: hidden;
           background: var(--cream);
+          /* Mobiel: vaste breedte via grid-column */
+          min-height: 120px;
         }
+        @media (min-width: 600px) {
+          .card-img-wrap { min-height: 0; }
+        }
+
         .card-img {
           object-fit: cover;
           transition: transform 0.4s ease;
         }
-        .card-inner:hover .card-img:first-child {
-          transform: scale(1.03);
-        }
+        .card:hover .card-img:not(.blurred) { transform: scale(1.03); }
+        .card-img.blurred { filter: blur(5px); transform: scale(1.08); }
 
-        /* Poster hover overlay */
-        .card-hover-poster {
+        .poster-hover {
           position: absolute;
           inset: 0;
           opacity: 0;
           transition: opacity 0.4s ease;
         }
 
-        .card-blur-overlay {
+        .prem-badge {
           position: absolute;
-          inset: 0;
-          backdrop-filter: blur(6px);
-          background: rgba(28, 58, 42, 0.3);
-        }
-        .premium-badge {
-          position: absolute;
-          top: 12px;
-          right: 12px;
+          top: 8px;
+          left: 0;
           background: var(--forest);
           color: var(--gold-light);
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 10px;
-          letter-spacing: 0.15em;
+          font-family: var(--sans);
+          font-size: 9px;
+          letter-spacing: 0.14em;
           text-transform: uppercase;
-          padding: 4px 10px;
+          padding: 3px 8px 3px 6px;
           display: flex;
           align-items: center;
-          gap: 5px;
+          gap: 4px;
           border: 1px solid var(--gold);
+          border-left: none;
         }
 
         .card-body {
-          padding: 20px;
+          padding: 12px 14px;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 4px;
+          justify-content: center;
         }
-        .difficulty-tag {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 10px;
-          letter-spacing: 0.15em;
+        @media (min-width: 600px) {
+          .card-body { padding: 18px 20px; justify-content: flex-start; }
+        }
+
+        .diff-tag {
+          font-family: var(--sans);
+          font-size: 9px;
+          letter-spacing: 0.14em;
           text-transform: uppercase;
-          padding: 2px 8px;
+          padding: 2px 7px;
           border-radius: 2px;
           width: fit-content;
           font-weight: 500;
         }
+        .tag-easy { background: #d1fae5; color: #065f46; }
+        .tag-med  { background: #fef3c7; color: #92400e; }
+        .tag-hard { background: #ffe4e6; color: #9f1239; }
+
         .card-title {
-          font-size: 1.2rem;
+          font-size: clamp(0.95rem, 2.5vw, 1.15rem);
           font-weight: 400;
-          margin: 4px 0 0;
           color: var(--forest);
           line-height: 1.2;
+          margin: 2px 0 0;
         }
         .card-sub {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.8rem;
+          font-family: var(--sans);
+          font-size: 0.72rem;
           color: var(--gold);
-          margin: 0;
-          letter-spacing: 0.05em;
           font-style: italic;
+          margin: 0;
         }
         .card-teaser {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.85rem;
-          color: var(--text-muted);
-          line-height: 1.5;
-          margin: 4px 0 0;
+          font-family: var(--sans);
+          font-size: 0.78rem;
+          color: var(--muted);
+          line-height: 1.45;
+          margin: 2px 0 0;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
+        /* Op mobiel teaser verbergen voor ruimte */
+        @media (max-width: 400px) { .card-teaser { display: none; } }
+
         .card-meta {
           display: flex;
-          gap: 14px;
-          margin-top: 4px;
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.75rem;
-          color: var(--text-muted);
+          gap: 10px;
+          flex-wrap: wrap;
+          font-family: var(--sans);
+          font-size: 0.7rem;
+          color: var(--muted);
+          margin-top: 2px;
         }
-        .card-meta span {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
+        .card-meta span { display: flex; align-items: center; gap: 3px; }
+
         .card-cta {
-          display: inline-block;
-          margin-top: 10px;
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.78rem;
-          letter-spacing: 0.1em;
+          font-family: var(--sans);
+          font-size: 0.7rem;
+          letter-spacing: 0.08em;
           text-transform: uppercase;
           color: var(--forest);
-          border-bottom: 1px solid currentColor;
+          border-bottom: 1px solid var(--forest);
           padding-bottom: 1px;
+          width: fit-content;
+          margin-top: 4px;
+          display: inline-block;
         }
-        .card-cta-premium {
+        .prem-cta {
           display: block;
-          margin-top: 12px;
-          padding: 9px 16px;
+          margin-top: 8px;
+          padding: 8px 12px;
           background: var(--forest);
           color: var(--gold-light);
           text-decoration: none;
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.78rem;
+          font-family: var(--sans);
+          font-size: 0.68rem;
           letter-spacing: 0.1em;
           text-transform: uppercase;
           text-align: center;
           border: 1px solid var(--gold);
+          border-radius: 1px;
           transition: background 0.2s;
         }
-        .card-cta-premium:hover {
-          background: var(--forest-mid);
-        }
+        .prem-cta:hover { background: var(--forest-mid); }
 
-        /* ── Premium banner ── */
-        .premium-banner {
-          position: relative;
+        /* ─── Premium banner ───────────────────────────────── */
+        .banner {
           background: var(--forest);
+          padding: 40px 20px;
+          position: relative;
           overflow: hidden;
         }
-        .premium-banner-deco {
+        @media (min-width: 768px) { .banner { padding: 60px 60px; } }
+        .banner-deco {
           position: absolute;
           inset: 0;
-          background:
-            repeating-linear-gradient(
-              45deg,
-              transparent,
-              transparent 30px,
-              rgba(201, 168, 76, 0.04) 30px,
-              rgba(201, 168, 76, 0.04) 31px
-            );
+          background: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 24px,
+            rgba(201,168,76,0.04) 24px,
+            rgba(201,168,76,0.04) 25px
+          );
         }
-        .premium-banner-content {
+        .banner-inner {
           position: relative;
           max-width: 1100px;
           margin: 0 auto;
-          padding: 60px 24px;
           display: flex;
           flex-direction: column;
           align-items: flex-start;
-          gap: 20px;
-          color: var(--cream);
+          gap: 16px;
         }
         @media (min-width: 768px) {
-          .premium-banner-content {
-            flex-direction: row;
-            align-items: center;
-            padding: 60px 60px;
-            gap: 32px;
-          }
+          .banner-inner { flex-direction: row; align-items: center; gap: 28px; }
         }
-        .premium-banner-content svg {
-          flex-shrink: 0;
-          color: var(--gold);
-        }
-        .premium-banner-content h2 {
-          font-size: 1.5rem;
+        .banner-icon { color: var(--gold); flex-shrink: 0; }
+        .banner-text { flex: 1; }
+        .banner-text h2 {
+          font-size: clamp(1.2rem, 3vw, 1.5rem);
           font-weight: 400;
-          margin: 0 0 6px;
           color: var(--cream);
+          margin: 0 0 8px;
         }
-        .premium-banner-content p {
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.9rem;
-          color: rgba(248, 244, 237, 0.7);
-          margin: 0;
+        .banner-text p {
+          font-family: var(--sans);
+          font-size: 0.875rem;
+          color: rgba(248,244,237,0.7);
           line-height: 1.6;
+          margin: 0;
         }
         .banner-cta {
           flex-shrink: 0;
-          padding: 12px 28px;
+          padding: 12px 24px;
           background: var(--gold);
           color: var(--forest);
           text-decoration: none;
-          font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-          font-size: 0.82rem;
+          font-family: var(--sans);
+          font-size: 0.78rem;
           letter-spacing: 0.15em;
           text-transform: uppercase;
           font-weight: 600;
-          border: none;
+          border-radius: 1px;
           transition: background 0.2s;
           white-space: nowrap;
+          display: inline-block;
         }
-        .banner-cta:hover {
-          background: var(--gold-light);
-        }
+        .banner-cta:hover { background: var(--gold-light); }
       `}</style>
     </div>
   );
