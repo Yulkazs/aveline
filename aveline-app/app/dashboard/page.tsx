@@ -68,9 +68,13 @@ export default async function DashboardPage() {
 
     case "MARKETING":
       return <DashboardMarketing firstName={firstName} />;
-
+    
     case "ADMIN":
+    redirect("/dashboard/presentatie");
+
     default:
       return <DashboardB2C firstName={firstName} points={user.points} />;
+
+
   }
 }
