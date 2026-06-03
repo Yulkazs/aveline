@@ -61,6 +61,7 @@ const NAV_CONFIG: Record<UserRole, NavItem[]> = {
   CUSTOMER_SERVICE: [
     { label: "Klachten",  href: "/dashboard/klachten",  icon: AlertCircle   },
     { label: "Chat",      href: "/dashboard/chat",      icon: MessageCircle },
+    { label: "Community", href: "/dashboard/community", icon: Users         },
     { label: "Profiel",   href: "/dashboard/profiel",   icon: User          },
   ],
 
