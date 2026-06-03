@@ -3,17 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
-import {
-  Search,
-  SlidersHorizontal,
-  Lock,
-  Clock,
-  Star,
-  Loader2,
-  ChefHat,
-} from "lucide-react";
+import { Search, Lock, Clock, ChefHat, Loader2, SlidersHorizontal, X } from "lucide-react";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface ReceptCard {
   id: string;
   slug: string;
@@ -29,43 +21,39 @@ interface ReceptCard {
   teaser: string | null;
 }
 
-const SMAKEN = ["alle", "puur", "melk", "noot", "fruit", "citrus"];
+const SMAKEN = ["alle", "melk", "puur", "noot", "fruit", "citrus"];
 const MOEILIJKHEDEN = ["alle", "makkelijk", "gemiddeld", "moeilijk"];
 
-const difficultyClass: Record<string, string> = {
-  makkelijk: "tag-easy",
-  gemiddeld: "tag-med",
-  moeilijk:  "tag-hard",
-};
 const difficultyLabel: Record<string, string> = {
   makkelijk: "Makkelijk",
   gemiddeld: "Gemiddeld",
-  moeilijk:  "Moeilijk",
+  moeilijk: "Moeilijk",
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function ReceptenOverzicht() {
-  const [recepten, setRecepten]           = useState<ReceptCard[]>([]);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState(false);
-  const [zoekterm, setZoekterm]           = useState("");
-  const [smaak, setSmaak]                 = useState("alle");
-  const [moeilijkheid, setMoeilijkheid]   = useState("alle");
-  const [filterOpen, setFilterOpen]       = useState(false);
+  const [recepten, setRecepten] = useState<ReceptCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [zoekterm, setZoekterm] = useState("");
+  const [smaak, setSmaak] = useState("alle");
+  const [moeilijkheid, setMoeilijkheid] = useState("alle");
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const fetchRecepten = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
       const params = new URLSearchParams();
-      if (zoekterm)                params.set("zoek", zoekterm);
-      if (smaak !== "alle")        params.set("smaak", smaak);
+      if (zoekterm) params.set("zoek", zoekterm);
+      if (smaak !== "alle") params.set("smaak", smaak);
       if (moeilijkheid !== "alle") params.set("moeilijkheid", moeilijkheid);
 
       const res = await fetch(`/api/recepten?${params.toString()}`);
-      if (!res.ok) throw new Error("fetch mislukt");
+      if (!res.ok) throw new Error();
       const data = await res.json();
-      setRecepten(data.recepten);
+      // Alleen recepten met een posterUrl tonen
+      setRecepten(data.recepten.filter((r: ReceptCard) => r.posterUrl));
     } catch {
       setError(true);
     } finally {
@@ -74,233 +62,230 @@ export default function ReceptenOverzicht() {
   }, [zoekterm, smaak, moeilijkheid]);
 
   useEffect(() => {
-    const timer = setTimeout(fetchRecepten, zoekterm ? 350 : 0);
-    return () => clearTimeout(timer);
+    const t = setTimeout(fetchRecepten, zoekterm ? 350 : 0);
+    return () => clearTimeout(t);
   }, [fetchRecepten, zoekterm]);
 
   const uitgelicht = recepten.find((r) => !r.isPremium);
+  const rest = recepten.filter((r) => r.id !== uitgelicht?.id);
+
+  const activeFilters =
+    (smaak !== "alle" ? 1 : 0) + (moeilijkheid !== "alle" ? 1 : 0);
 
   return (
     <div className="page">
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
+
+      {/* ── Hero ──────────────────────────────────────────────────────── */}
       <header className="hero">
-        <div className="hero-bg" />
-        <div className="hero-content">
+        <div className="hero-inner">
           <p className="eyebrow">Avéline Atelier</p>
           <h1 className="hero-title">
             Recepten &amp;<br />
-            <em className="hero-accent">Inspiratie</em>
+            <em>Inspiratie</em>
           </h1>
           <p className="hero-desc">
-            Ontdek verfijnde bereidingen met onze ambachtelijke chocolades —
+            Verfijnde bereidingen met onze ambachtelijke chocolades —
             van snelle truffels tot meesterlijke taarten.
           </p>
         </div>
 
-        {uitgelicht && (
-          <div className="hero-feature">
-            <div className="feature-img-wrap">
-              {uitgelicht.posterUrl && (
-                <Image
-                  src={uitgelicht.posterUrl}
-                  alt={uitgelicht.title}
-                  fill
-                  className="feature-img"
-                  sizes="(max-width: 480px) 140px, 200px"
-                  priority
-                />
-              )}
+        {/* Featured recept */}
+        {uitgelicht && uitgelicht.posterUrl && (
+          <Link href={`/recepten/${uitgelicht.slug}`} className="hero-feature">
+            <div className="hf-img-wrap">
+              <Image
+                src={uitgelicht.posterUrl}
+                alt={uitgelicht.title}
+                fill
+                className="hf-img"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+              <div className="hf-gradient" />
             </div>
-            <div className="feature-info">
-              <span className="feature-tag">Uitgelicht recept</span>
-              <h2 className="feature-name">{uitgelicht.title}</h2>
+            <div className="hf-content">
+              <span className="hf-tag">Uitgelicht recept</span>
+              <h2 className="hf-title">{uitgelicht.title}</h2>
               {uitgelicht.subtitle && (
-                <p className="feature-sub-italic">{uitgelicht.subtitle}</p>
+                <p className="hf-sub">{uitgelicht.subtitle}</p>
               )}
-              <p className="feature-teaser">{uitgelicht.teaser}</p>
-              <Link href={`/recepten/${uitgelicht.slug}`} className="feature-cta">
-                Bekijk recept
-              </Link>
+              <div className="hf-meta">
+                {uitgelicht.duur && (
+                  <span><Clock size={12} /> {uitgelicht.duur} min</span>
+                )}
+                <span>{difficultyLabel[uitgelicht.difficulty]}</span>
+              </div>
+              <span className="hf-cta">Bekijk recept →</span>
             </div>
-          </div>
+          </Link>
         )}
       </header>
 
-      {/* ── Zoek & Filter ────────────────────────────────────────────── */}
-      <section className="search-bar">
-        <div className="search-wrap">
-          <Search size={15} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Zoek recept of chocolade…"
-            value={zoekterm}
-            onChange={(e) => setZoekterm(e.target.value)}
-            className="search-input"
-          />
+      {/* ── Zoekbalk ──────────────────────────────────────────────────── */}
+      <div className="search-section">
+        <div className="search-row">
+          <div className="search-wrap">
+            <Search size={15} className="search-icon" />
+            <input
+              type="search"
+              placeholder="Zoek recept of chocolade…"
+              value={zoekterm}
+              onChange={(e) => setZoekterm(e.target.value)}
+              className="search-input"
+            />
+            {zoekterm && (
+              <button className="search-clear" onClick={() => setZoekterm("")}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <button
+            className={`filter-btn ${filterOpen ? "open" : ""}`}
+            onClick={() => setFilterOpen(!filterOpen)}
+          >
+            <SlidersHorizontal size={14} />
+            {activeFilters > 0 && (
+              <span className="filter-count">{activeFilters}</span>
+            )}
+          </button>
         </div>
-        <button
-          className={`filter-btn ${filterOpen ? "active" : ""}`}
-          onClick={() => setFilterOpen(!filterOpen)}
-          aria-expanded={filterOpen}
-        >
-          <SlidersHorizontal size={14} />
-          Filters
-        </button>
-      </section>
 
-      {filterOpen && (
-        <div className="filter-panel">
-          <fieldset className="filter-group">
-            <legend>Smaak</legend>
-            <div className="pills">
-              {SMAKEN.map((s) => (
-                <button
-                  key={s}
-                  className={`pill ${smaak === s ? "pill-on" : ""}`}
-                  onClick={() => setSmaak(s)}
-                >
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
-              ))}
+        {filterOpen && (
+          <div className="filter-panel">
+            <div className="filter-group">
+              <p className="filter-label">Smaak</p>
+              <div className="pills">
+                {SMAKEN.map((s) => (
+                  <button
+                    key={s}
+                    className={`pill ${smaak === s ? "on" : ""}`}
+                    onClick={() => setSmaak(s)}
+                  >
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
-          </fieldset>
-          <fieldset className="filter-group">
-            <legend>Moeilijkheid</legend>
-            <div className="pills">
-              {MOEILIJKHEDEN.map((m) => (
-                <button
-                  key={m}
-                  className={`pill ${moeilijkheid === m ? "pill-on" : ""}`}
-                  onClick={() => setMoeilijkheid(m)}
-                >
-                  {m.charAt(0).toUpperCase() + m.slice(1)}
-                </button>
-              ))}
+            <div className="filter-group">
+              <p className="filter-label">Moeilijkheid</p>
+              <div className="pills">
+                {MOEILIJKHEDEN.map((m) => (
+                  <button
+                    key={m}
+                    className={`pill ${moeilijkheid === m ? "on" : ""}`}
+                    onClick={() => setMoeilijkheid(m)}
+                  >
+                    {m.charAt(0).toUpperCase() + m.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
-          </fieldset>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
-      {/* ── Resultaten ───────────────────────────────────────────────── */}
+      {/* ── Grid ──────────────────────────────────────────────────────── */}
       <main className="main">
-        <p className="results-count">
-          {recepten.length} recept{recepten.length !== 1 ? "en" : ""} gevonden
-        </p>
-
         {loading ? (
-          <div className="empty">
-            <Loader2 size={28} strokeWidth={1.2} className="spin" />
+          <div className="state">
+            <Loader2 size={24} className="spin" />
             <p>Recepten laden…</p>
           </div>
         ) : error ? (
-          <div className="empty">
-            <ChefHat size={36} strokeWidth={1.2} />
-            <p>Kon recepten niet laden. Probeer het later opnieuw.</p>
-            <button className="pill" onClick={fetchRecepten}>
+          <div className="state">
+            <ChefHat size={32} strokeWidth={1.2} />
+            <p>Kon recepten niet laden.</p>
+            <button className="pill on" onClick={fetchRecepten}>
               Opnieuw proberen
             </button>
           </div>
         ) : recepten.length === 0 ? (
-          <div className="empty">
-            <ChefHat size={36} strokeWidth={1.2} />
-            <p>Geen recepten gevonden voor deze zoekopdracht.</p>
+          <div className="state">
+            <ChefHat size={32} strokeWidth={1.2} />
+            <p>Geen recepten gevonden.</p>
           </div>
         ) : (
-          <ul className="grid">
-            {recepten.map((r, i) =>
-              r.isPremium ? (
-                /* ── Premium kaart ── */
-                <li key={r.id} className="card-li" style={{ animationDelay: `${i * 55}ms` }}>
-                  <div className="card premium">
-                    <div className="card-img-wrap">
-                      {r.imageUrl && (
+          <>
+            <p className="count">{recepten.length} recept{recepten.length !== 1 ? "en" : ""}</p>
+            <ul className="grid">
+              {rest.map((r, i) =>
+                r.isPremium ? (
+                  <li key={r.id} className="card-li" style={{ animationDelay: `${i * 60}ms` }}>
+                    <div className="card premium">
+                      <div className="card-img-wrap">
                         <Image
-                          src={r.imageUrl}
-                          alt={r.title}
-                          fill
-                          className="card-img blurred"
-                          sizes="(max-width: 480px) 120px, 160px"
-                        />
-                      )}
-                      <span className="prem-badge">
-                        <Lock size={10} /> Premium
-                      </span>
-                    </div>
-                    <div className="card-body">
-                      <span className={`diff-tag ${difficultyClass[r.difficulty] ?? ""}`}>
-                        {difficultyLabel[r.difficulty] ?? r.difficulty}
-                      </span>
-                      <h3 className="card-title">{r.title}</h3>
-                      {r.subtitle && <p className="card-sub">{r.subtitle}</p>}
-                      <p className="card-teaser">{r.teaser}</p>
-                      <div className="card-meta">
-                        {r.duur   && <span><Clock size={11} /> {r.duur} min</span>}
-                        {r.product && <span><Star  size={11} /> {r.product}</span>}
-                      </div>
-                      <Link href="/register" className="prem-cta">
-                        Account aanmaken voor toegang
-                      </Link>
-                    </div>
-                  </div>
-                </li>
-              ) : (
-                /* ── Publiek recept ── */
-                <li key={r.id} className="card-li" style={{ animationDelay: `${i * 55}ms` }}>
-                  <Link href={`/recepten/${r.slug}`} className="card">
-                    <div className="card-img-wrap">
-                      {r.imageUrl && (
-                        <Image
-                          src={r.imageUrl}
+                          src={r.posterUrl!}
                           alt={r.title}
                           fill
                           className="card-img"
-                          sizes="(max-width: 480px) 120px, 160px"
+                          sizes="(max-width: 600px) 100vw, (max-width: 960px) 50vw, 33vw"
                         />
-                      )}
-                      {r.posterUrl && (
-                        <div className="poster-hover">
-                          <Image
-                            src={r.posterUrl}
-                            alt=""
-                            fill
-                            className="card-img"
-                            sizes="(max-width: 480px) 120px, 160px"
-                          />
+                        <div className="card-overlay" />
+                        <div className="card-top-row">
+                          <span className="diff-badge diff-badge--dark">
+                            {difficultyLabel[r.difficulty] ?? r.difficulty}
+                          </span>
+                          <span className="prem-badge">
+                            <Lock size={9} /> Premium
+                          </span>
                         </div>
-                      )}
-                    </div>
-                    <div className="card-body">
-                      <span className={`diff-tag ${difficultyClass[r.difficulty] ?? ""}`}>
-                        {difficultyLabel[r.difficulty] ?? r.difficulty}
-                      </span>
-                      <h3 className="card-title">{r.title}</h3>
-                      {r.subtitle && <p className="card-sub">{r.subtitle}</p>}
-                      <p className="card-teaser">{r.teaser}</p>
-                      <div className="card-meta">
-                        {r.duur    && <span><Clock size={11} /> {r.duur} min</span>}
-                        {r.product && <span><Star  size={11} /> {r.product}</span>}
+                        <div className="card-bottom">
+                          <h3 className="card-title-over">{r.title}</h3>
+                          {r.subtitle && <p className="card-sub-over">{r.subtitle}</p>}
+                          <div className="card-meta-over">
+                            {r.duur && <span><Clock size={11} /> {r.duur} min</span>}
+                            {r.product && <span>{r.product}</span>}
+                          </div>
+                          <Link href="/register" className="card-cta-prem">
+                            Account aanmaken
+                          </Link>
+                        </div>
                       </div>
-                      <span className="card-cta">Bekijk recept →</span>
                     </div>
-                  </Link>
-                </li>
-              )
-            )}
-          </ul>
+                  </li>
+                ) : (
+                  <li key={r.id} className="card-li" style={{ animationDelay: `${i * 60}ms` }}>
+                    <Link href={`/recepten/${r.slug}`} className="card">
+                      <div className="card-img-wrap">
+                        <Image
+                          src={r.posterUrl!}
+                          alt={r.title}
+                          fill
+                          className="card-img"
+                          sizes="(max-width: 600px) 100vw, (max-width: 960px) 50vw, 33vw"
+                        />
+                        <div className="card-overlay" />
+                        <div className="card-top-row">
+                          <span className="diff-badge">
+                            {difficultyLabel[r.difficulty] ?? r.difficulty}
+                          </span>
+                        </div>
+                        <div className="card-bottom">
+                          <h3 className="card-title-over">{r.title}</h3>
+                          {r.subtitle && <p className="card-sub-over">{r.subtitle}</p>}
+                          <div className="card-meta-over">
+                            {r.duur && <span><Clock size={11} /> {r.duur} min</span>}
+                            {r.product && <span>{r.product}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                )
+              )}
+            </ul>
+          </>
         )}
       </main>
 
-      {/* ── Premium banner ───────────────────────────────────────────── */}
+      {/* ── Banner ────────────────────────────────────────────────────── */}
       <section className="banner">
-        <div className="banner-deco" />
         <div className="banner-inner">
-          <Lock size={20} strokeWidth={1.5} className="banner-icon" />
-          <div className="banner-text">
-            <h2>Ontgrendel alle premium recepten</h2>
-            <p>
-              Maak gratis een account aan en krijg toegang tot exclusieve
-              video-tutorials, moeilijkere bereidingen en gepersonaliseerde
-              aanbevelingen.
+          <Lock size={18} strokeWidth={1.5} className="banner-icon" />
+          <div>
+            <h2 className="banner-title">Ontgrendel alle premium recepten</h2>
+            <p className="banner-desc">
+              Gratis account — exclusieve video-tutorials en gepersonaliseerde aanbevelingen.
             </p>
           </div>
           <Link href="/register" className="banner-cta">
@@ -309,9 +294,9 @@ export default function ReceptenOverzicht() {
         </div>
       </section>
 
-      {/* ── Styles ───────────────────────────────────────────────────── */}
+      {/* ── Styles ────────────────────────────────────────────────────── */}
       <style jsx>{`
-        /* ─── Tokens ─────────────────────────────────────── */
+        /* ── Tokens ── */
         .page {
           --forest:     #1c3a2a;
           --forest-mid: #2a5040;
@@ -323,511 +308,485 @@ export default function ReceptenOverzicht() {
           --muted:      #6b6255;
           --border:     #e0d5c5;
           --sans: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-
           background: var(--warm-white);
           color: var(--text);
           font-family: "Georgia", "Times New Roman", serif;
           min-height: 100vh;
         }
 
-        /* ─── Hero ─────────────────────────────────────────── */
+        /* ── Hero ── */
         .hero {
           background: var(--forest);
-          padding: 48px 20px 0;
-          position: relative;
+          padding: 40px 20px 0;
           overflow: hidden;
         }
-        .hero-bg {
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(ellipse at 80% -20%, #2e5c40 0%, transparent 55%),
-            radial-gradient(ellipse at 5%  110%, #0f2419 0%, transparent 50%);
-          pointer-events: none;
+        @media (min-width: 768px) {
+          .hero {
+            padding: 64px 48px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: end;
+            gap: 40px;
+          }
         }
-        .hero-content { position: relative; padding-bottom: 32px; }
-
+        .hero-inner { padding-bottom: 32px; }
         .eyebrow {
           font-family: var(--sans);
           font-size: 10px;
           letter-spacing: 0.32em;
           text-transform: uppercase;
           color: var(--gold);
-          margin: 0 0 14px;
+          margin: 0 0 12px;
         }
         .hero-title {
-          font-size: clamp(2.2rem, 9vw, 3.5rem);
+          font-size: clamp(2.4rem, 9vw, 3.8rem);
           font-weight: 400;
           line-height: 1.05;
           color: var(--cream);
-          margin: 0 0 14px;
+          margin: 0 0 16px;
         }
-        .hero-accent { color: var(--gold); font-style: italic; }
+        .hero-title em { color: var(--gold); font-style: italic; }
         .hero-desc {
           font-family: var(--sans);
           font-size: 0.9rem;
-          color: rgba(248,244,237,0.7);
+          color: rgba(248,244,237,0.65);
           line-height: 1.65;
-          max-width: 340px;
+          max-width: 320px;
           margin: 0;
         }
 
-        /* ─── Featured card (binnen hero) ─────────────────── */
+        /* Featured */
         .hero-feature {
+          display: block;
           position: relative;
-          margin: 28px -20px 0;
-          display: grid;
-          grid-template-columns: 140px 1fr;
-          background: var(--cream);
-          border-top: 1px solid rgba(201,168,76,0.3);
+          text-decoration: none;
+          margin: 0 -20px;
           overflow: hidden;
         }
-        @media (min-width: 480px) {
-          .hero-feature { grid-template-columns: 180px 1fr; }
+        @media (min-width: 768px) {
+          .hero-feature {
+            margin: 0;
+            border-radius: 2px 2px 0 0;
+          }
+        }
+        .hf-img-wrap {
+          position: relative;
+          height: clamp(220px, 55vw, 360px);
         }
         @media (min-width: 768px) {
-          .hero {
-            padding: 80px 60px 0;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            align-items: end;
-            gap: 40px;
-          }
-          .hero-content { padding-bottom: 48px; }
-          .hero-feature {
-            margin: 0 0 0 0;    /* reset negative margin */
-            border-top: none;
-            border-left: none;
-            align-self: end;
-            box-shadow: 0 -20px 60px rgba(0,0,0,0.35);
-          }
+          .hf-img-wrap { height: 320px; }
         }
-
-        .feature-img-wrap {
-          position: relative;
-          height: 160px;
+        .hf-img { object-fit: cover; object-position: center 20%; transition: transform 0.5s ease; }
+        .hero-feature:hover .hf-img { transform: scale(1.03); }
+        .hf-gradient {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(to top, rgba(14,30,20,0.9) 0%, rgba(14,30,20,0.2) 55%, transparent 100%);
         }
-        @media (min-width: 480px) { .feature-img-wrap { height: 190px; } }
-        @media (min-width: 768px) { .feature-img-wrap { height: 260px; } }
-        .feature-img { object-fit: cover; object-position: center top; }
-
-        .feature-info {
-          padding: 16px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          gap: 6px;
+        .hf-content {
+          position: absolute;
+          bottom: 0; left: 0; right: 0;
+          padding: 20px;
         }
-        @media (min-width: 768px) { .feature-info { padding: 28px 24px; gap: 8px; } }
-
-        .feature-tag {
+        @media (min-width: 768px) { .hf-content { padding: 28px; } }
+        .hf-tag {
           font-family: var(--sans);
           font-size: 9px;
           letter-spacing: 0.22em;
           text-transform: uppercase;
           color: var(--gold);
-          border: 1px solid rgba(201,168,76,0.4);
+          border: 1px solid rgba(201,168,76,0.5);
           padding: 2px 8px;
           display: inline-block;
-          width: fit-content;
+          margin-bottom: 8px;
         }
-        .feature-name {
-          font-size: clamp(1rem, 3.5vw, 1.5rem);
+        .hf-title {
+          font-size: clamp(1.3rem, 5vw, 2rem);
           font-weight: 400;
-          color: var(--forest);
-          margin: 0;
-          line-height: 1.15;
+          color: var(--cream);
+          margin: 0 0 4px;
+          line-height: 1.1;
         }
-        .feature-sub-italic {
+        .hf-sub {
           font-family: var(--sans);
-          font-size: 0.78rem;
+          font-size: 0.8rem;
           color: var(--gold);
           font-style: italic;
-          margin: 0;
+          margin: 0 0 8px;
         }
-        .feature-teaser {
+        .hf-meta {
+          display: flex;
+          gap: 14px;
           font-family: var(--sans);
-          font-size: 0.78rem;
-          color: var(--muted);
-          line-height: 1.45;
-          margin: 0;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
+          font-size: 0.75rem;
+          color: rgba(248,244,237,0.6);
+          margin-bottom: 12px;
         }
-        .feature-cta {
+        .hf-meta span { display: flex; align-items: center; gap: 4px; }
+        .hf-cta {
           font-family: var(--sans);
-          font-size: 0.72rem;
+          font-size: 0.75rem;
           letter-spacing: 0.1em;
           text-transform: uppercase;
-          color: var(--forest);
-          text-decoration: none;
-          border-bottom: 1px solid var(--forest);
-          padding-bottom: 1px;
-          width: fit-content;
+          color: var(--cream);
+          border-bottom: 1px solid rgba(248,244,237,0.4);
+          padding-bottom: 2px;
           display: inline-block;
+          transition: color 0.2s, border-color 0.2s;
         }
-        .feature-cta:hover { color: var(--gold); border-color: var(--gold); }
+        .hero-feature:hover .hf-cta { color: var(--gold); border-color: var(--gold); }
 
-        /* ─── Zoek & filter ────────────────────────────────── */
-        .search-bar {
+        /* ── Zoek ── */
+        .search-section {
           padding: 20px 20px 0;
-          display: flex;
-          gap: 10px;
-          align-items: center;
           max-width: 1100px;
           margin: 0 auto;
         }
-        @media (min-width: 768px) { .search-bar { padding: 36px 60px 0; } }
+        @media (min-width: 768px) { .search-section { padding: 32px 48px 0; } }
 
-        .search-wrap { flex: 1; position: relative; }
+        .search-row {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+        }
+        .search-wrap {
+          flex: 1;
+          position: relative;
+        }
         .search-icon {
           position: absolute;
-          left: 11px;
+          left: 12px;
           top: 50%;
           transform: translateY(-50%);
           color: var(--muted);
+          pointer-events: none;
         }
         .search-input {
           width: 100%;
-          padding: 10px 12px 10px 34px;
+          padding: 12px 36px 12px 36px;
           border: 1px solid var(--border);
           background: var(--cream);
           font-family: var(--sans);
-          font-size: 0.88rem;
+          font-size: 0.9rem;
           color: var(--text);
           outline: none;
           border-radius: 2px;
-          transition: border-color 0.2s;
           box-sizing: border-box;
+          -webkit-appearance: none;
+          transition: border-color 0.2s;
         }
         .search-input:focus { border-color: var(--forest); }
         .search-input::placeholder { color: var(--muted); }
-
-        .filter-btn {
+        .search-clear {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          padding: 4px;
+          cursor: pointer;
+          color: var(--muted);
           display: flex;
           align-items: center;
-          gap: 5px;
-          padding: 10px 14px;
+        }
+        .filter-btn {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 12px 16px;
           border: 1px solid var(--border);
           background: var(--cream);
           font-family: var(--sans);
-          font-size: 0.82rem;
+          font-size: 0.85rem;
           color: var(--text);
           cursor: pointer;
           border-radius: 2px;
-          white-space: nowrap;
           flex-shrink: 0;
-          transition: background 0.2s, border-color 0.2s;
+          transition: all 0.2s;
         }
-        .filter-btn.active,
+        .filter-btn.open,
         .filter-btn:hover { background: var(--forest); color: var(--cream); border-color: var(--forest); }
+        .filter-count {
+          position: absolute;
+          top: -5px;
+          right: -5px;
+          width: 16px;
+          height: 16px;
+          background: var(--gold);
+          color: var(--forest);
+          border-radius: 50%;
+          font-size: 10px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
 
         .filter-panel {
-          max-width: 1100px;
-          margin: 12px auto 0;
-          padding: 0 20px;
+          margin-top: 12px;
+          padding: 16px;
+          background: var(--cream);
+          border: 1px solid var(--border);
           display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
+          flex-direction: column;
+          gap: 14px;
           animation: slideDown 0.2s ease;
+          border-radius: 2px;
         }
-        @media (min-width: 768px) { .filter-panel { padding: 0 60px; } }
         @keyframes slideDown {
           from { opacity: 0; transform: translateY(-6px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .filter-group { border: none; padding: 0; margin: 0; }
-        .filter-group legend {
+        .filter-group { display: flex; flex-direction: column; gap: 8px; }
+        .filter-label {
           font-family: var(--sans);
           font-size: 9px;
           letter-spacing: 0.22em;
           text-transform: uppercase;
           color: var(--muted);
-          margin-bottom: 8px;
+          margin: 0;
         }
         .pills { display: flex; flex-wrap: wrap; gap: 6px; }
         .pill {
-          padding: 5px 12px;
+          padding: 6px 14px;
           border: 1px solid var(--border);
           background: white;
           font-family: var(--sans);
-          font-size: 0.78rem;
+          font-size: 0.8rem;
           color: var(--muted);
           cursor: pointer;
           border-radius: 999px;
           transition: all 0.15s;
+          -webkit-tap-highlight-color: transparent;
         }
         .pill:hover { border-color: var(--forest); color: var(--forest); }
-        .pill-on { background: var(--forest); border-color: var(--forest); color: var(--cream); }
+        .pill.on { background: var(--forest); border-color: var(--forest); color: var(--cream); }
 
-        /* ─── Main / grid ──────────────────────────────────── */
+        /* ── Main / grid ── */
         .main {
           max-width: 1100px;
           margin: 0 auto;
-          padding: 16px 20px 60px;
+          padding: 20px 20px 64px;
         }
-        @media (min-width: 768px) { .main { padding: 28px 60px 80px; } }
+        @media (min-width: 768px) { .main { padding: 28px 48px 80px; } }
 
-        .results-count {
+        .count {
           font-family: var(--sans);
           font-size: 0.75rem;
           color: var(--muted);
+          margin: 0 0 16px;
           letter-spacing: 0.04em;
-          margin: 0 0 14px;
         }
 
-        .empty {
+        .state {
           text-align: center;
-          padding: 60px 24px;
+          padding: 64px 24px;
           color: var(--muted);
+          font-family: var(--sans);
+          font-size: 0.9rem;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 14px;
-          font-family: var(--sans);
-          font-size: 0.9rem;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; }
 
-        /* Grid: 1-kolom op mobiel, 2-kolom vanaf 600px, 3-kolom vanaf 960px */
+        /* Grid — 1 kolom mobiel, 2 vanaf 560px, 3 vanaf 900px */
         .grid {
           list-style: none;
           padding: 0;
           margin: 0;
           display: grid;
           grid-template-columns: 1fr;
-          gap: 14px;
+          gap: 16px;
         }
-        @media (min-width: 600px) {
-          .grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
-        }
-        @media (min-width: 960px) {
-          .grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
-        }
+        @media (min-width: 560px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 20px; } }
+        @media (min-width: 900px) { .grid { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
 
-        /* ─── Kaart ────────────────────────────────────────── */
+        /* ── Kaart ── */
         .card-li {
-          animation: fadeUp 0.35s ease both;
+          animation: fadeUp 0.4s ease both;
         }
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
+          from { opacity: 0; transform: translateY(14px); }
           to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* Mobiel: horizontale layout (thumbnail links) */
         .card {
-          display: grid;
-          grid-template-columns: 120px 1fr;
-          background: white;
-          border: 1px solid var(--border);
-          border-radius: 2px;
-          overflow: hidden;
+          display: block;
           text-decoration: none;
           color: inherit;
-          height: 100%;
-          transition: box-shadow 0.22s, transform 0.22s;
-          -webkit-tap-highlight-color: transparent;
+          border-radius: 3px;
+          overflow: hidden;
+          position: relative;
         }
-        /* Vanaf 600px: verticale card layout */
-        @media (min-width: 600px) {
-          .card {
-            grid-template-columns: 1fr;
-            grid-template-rows: 200px 1fr;
-          }
-        }
-        @media (min-width: 960px) {
-          .card:not(.premium):hover {
-            box-shadow: 0 12px 40px rgba(28,58,42,0.12);
-            transform: translateY(-3px);
-          }
-          .card:not(.premium):hover .poster-hover { opacity: 1; }
-        }
+        .card.premium { cursor: default; }
 
         .card-img-wrap {
           position: relative;
+          width: 100%;
+          /* 3:4 portret ratio — mooi op mobiel */
+          aspect-ratio: 3 / 4;
           overflow: hidden;
-          background: var(--cream);
-          /* Mobiel: vaste breedte via grid-column */
-          min-height: 120px;
+          background: var(--forest);
+          border-radius: 3px;
         }
-        @media (min-width: 600px) {
-          .card-img-wrap { min-height: 0; }
+        @media (min-width: 560px) {
+          /* iets breder op desktop */
+          .card-img-wrap { aspect-ratio: 2 / 3; }
         }
 
         .card-img {
           object-fit: cover;
-          transition: transform 0.4s ease;
+          object-position: center top;
+          transition: transform 0.5s ease;
         }
-        .card:hover .card-img:not(.blurred) { transform: scale(1.03); }
-        .card-img.blurred { filter: blur(5px); transform: scale(1.08); }
+        .card:hover .card-img { transform: scale(1.04); }
 
-        .poster-hover {
+        /* Gradient overlay van onder */
+        .card-overlay {
           position: absolute;
           inset: 0;
-          opacity: 0;
-          transition: opacity 0.4s ease;
+          background: linear-gradient(
+            to top,
+            rgba(10, 22, 14, 0.92) 0%,
+            rgba(10, 22, 14, 0.4) 45%,
+            rgba(10, 22, 14, 0.05) 70%,
+            transparent 100%
+          );
+          border-radius: 3px;
+        }
+
+        /* Badge rij bovenaan */
+        .card-top-row {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          right: 12px;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .diff-badge {
+          font-family: var(--sans);
+          font-size: 9px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          font-weight: 600;
+          padding: 3px 9px;
+          border-radius: 2px;
+          background: rgba(248,244,237,0.15);
+          backdrop-filter: blur(6px);
+          color: var(--cream);
+          border: 1px solid rgba(248,244,237,0.2);
+        }
+        .diff-badge--dark {
+          background: rgba(10,22,14,0.5);
+          border-color: rgba(248,244,237,0.15);
         }
 
         .prem-badge {
-          position: absolute;
-          top: 8px;
-          left: 0;
-          background: var(--forest);
-          color: var(--gold-light);
-          font-family: var(--sans);
-          font-size: 9px;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          padding: 3px 8px 3px 6px;
           display: flex;
           align-items: center;
           gap: 4px;
-          border: 1px solid var(--gold);
-          border-left: none;
-        }
-
-        .card-body {
-          padding: 12px 14px;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          justify-content: center;
-        }
-        @media (min-width: 600px) {
-          .card-body { padding: 18px 20px; justify-content: flex-start; }
-        }
-
-        .diff-tag {
           font-family: var(--sans);
           font-size: 9px;
-          letter-spacing: 0.14em;
+          letter-spacing: 0.12em;
           text-transform: uppercase;
-          padding: 2px 7px;
-          border-radius: 2px;
-          width: fit-content;
-          font-weight: 500;
-        }
-        .tag-easy { background: #d1fae5; color: #065f46; }
-        .tag-med  { background: #fef3c7; color: #92400e; }
-        .tag-hard { background: #ffe4e6; color: #9f1239; }
-
-        .card-title {
-          font-size: clamp(0.95rem, 2.5vw, 1.15rem);
-          font-weight: 400;
-          color: var(--forest);
-          line-height: 1.2;
-          margin: 2px 0 0;
-        }
-        .card-sub {
-          font-family: var(--sans);
-          font-size: 0.72rem;
-          color: var(--gold);
-          font-style: italic;
-          margin: 0;
-        }
-        .card-teaser {
-          font-family: var(--sans);
-          font-size: 0.78rem;
-          color: var(--muted);
-          line-height: 1.45;
-          margin: 2px 0 0;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        /* Op mobiel teaser verbergen voor ruimte */
-        @media (max-width: 400px) { .card-teaser { display: none; } }
-
-        .card-meta {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          font-family: var(--sans);
-          font-size: 0.7rem;
-          color: var(--muted);
-          margin-top: 2px;
-        }
-        .card-meta span { display: flex; align-items: center; gap: 3px; }
-
-        .card-cta {
-          font-family: var(--sans);
-          font-size: 0.7rem;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: var(--forest);
-          border-bottom: 1px solid var(--forest);
-          padding-bottom: 1px;
-          width: fit-content;
-          margin-top: 4px;
-          display: inline-block;
-        }
-        .prem-cta {
-          display: block;
-          margin-top: 8px;
-          padding: 8px 12px;
+          padding: 3px 8px;
           background: var(--forest);
           color: var(--gold-light);
-          text-decoration: none;
+          border: 1px solid var(--gold);
+          border-radius: 2px;
+        }
+
+        /* Content onderaan */
+        .card-bottom {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          padding: 16px;
+        }
+        @media (min-width: 560px) { .card-bottom { padding: 20px; } }
+
+        .card-title-over {
+          font-size: clamp(1.05rem, 3.5vw, 1.3rem);
+          font-weight: 400;
+          color: var(--cream);
+          margin: 0 0 4px;
+          line-height: 1.15;
+        }
+        .card-sub-over {
           font-family: var(--sans);
-          font-size: 0.68rem;
+          font-size: 0.75rem;
+          color: var(--gold);
+          font-style: italic;
+          margin: 0 0 8px;
+        }
+        .card-meta-over {
+          display: flex;
+          gap: 12px;
+          font-family: var(--sans);
+          font-size: 0.72rem;
+          color: rgba(248,244,237,0.55);
+          margin-bottom: 12px;
+          flex-wrap: wrap;
+        }
+        .card-meta-over span { display: flex; align-items: center; gap: 4px; }
+
+        .card-cta-prem {
+          display: inline-block;
+          padding: 9px 16px;
+          background: rgba(201,168,76,0.15);
+          border: 1px solid rgba(201,168,76,0.5);
+          color: var(--gold-light);
+          font-family: var(--sans);
+          font-size: 0.72rem;
           letter-spacing: 0.1em;
           text-transform: uppercase;
-          text-align: center;
-          border: 1px solid var(--gold);
-          border-radius: 1px;
+          text-decoration: none;
+          border-radius: 2px;
           transition: background 0.2s;
+          backdrop-filter: blur(4px);
+          -webkit-tap-highlight-color: transparent;
         }
-        .prem-cta:hover { background: var(--forest-mid); }
+        .card-cta-prem:hover { background: rgba(201,168,76,0.25); }
 
-        /* ─── Premium banner ───────────────────────────────── */
+        /* ── Banner ── */
         .banner {
           background: var(--forest);
           padding: 40px 20px;
-          position: relative;
-          overflow: hidden;
         }
-        @media (min-width: 768px) { .banner { padding: 60px 60px; } }
-        .banner-deco {
-          position: absolute;
-          inset: 0;
-          background: repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 24px,
-            rgba(201,168,76,0.04) 24px,
-            rgba(201,168,76,0.04) 25px
-          );
-        }
+        @media (min-width: 768px) { .banner { padding: 52px 48px; } }
         .banner-inner {
-          position: relative;
           max-width: 1100px;
           margin: 0 auto;
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
           gap: 16px;
+          align-items: flex-start;
         }
-        @media (min-width: 768px) {
-          .banner-inner { flex-direction: row; align-items: center; gap: 28px; }
+        @media (min-width: 640px) {
+          .banner-inner { flex-direction: row; align-items: center; gap: 24px; }
         }
         .banner-icon { color: var(--gold); flex-shrink: 0; }
-        .banner-text { flex: 1; }
-        .banner-text h2 {
-          font-size: clamp(1.2rem, 3vw, 1.5rem);
+        .banner-title {
+          font-size: clamp(1.1rem, 3vw, 1.4rem);
           font-weight: 400;
           color: var(--cream);
-          margin: 0 0 8px;
+          margin: 0 0 6px;
         }
-        .banner-text p {
+        .banner-desc {
           font-family: var(--sans);
-          font-size: 0.875rem;
-          color: rgba(248,244,237,0.7);
-          line-height: 1.6;
+          font-size: 0.85rem;
+          color: rgba(248,244,237,0.65);
           margin: 0;
+          line-height: 1.55;
         }
         .banner-cta {
           flex-shrink: 0;
@@ -841,9 +800,9 @@ export default function ReceptenOverzicht() {
           text-transform: uppercase;
           font-weight: 600;
           border-radius: 1px;
-          transition: background 0.2s;
           white-space: nowrap;
-          display: inline-block;
+          transition: background 0.2s;
+          -webkit-tap-highlight-color: transparent;
         }
         .banner-cta:hover { background: var(--gold-light); }
       `}</style>
