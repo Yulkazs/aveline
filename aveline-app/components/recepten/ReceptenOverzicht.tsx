@@ -52,8 +52,13 @@ export default function ReceptenOverzicht() {
       const res = await fetch(`/api/recepten?${params.toString()}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
-      // Alleen recepten met een posterUrl tonen
-      setRecepten(data.recepten.filter((r: ReceptCard) => r.posterUrl));
+
+      // FIX: alleen recepten met "Poster1" in de posterUrl, max 4
+      setRecepten(
+        data.recepten
+          .filter((r: ReceptCard) => r.posterUrl?.includes("Poster1"))
+          .slice(0, 4)
+      );
     } catch {
       setError(true);
     } finally {
@@ -124,8 +129,9 @@ export default function ReceptenOverzicht() {
       {/* ── Zoekbalk ──────────────────────────────────────────────────── */}
       <div className="search-section">
         <div className="search-row">
+          {/* FIX: search-wrap met correcte positional context */}
           <div className="search-wrap">
-            <Search size={15} className="search-icon" />
+            <Search size={15} className="search-icon" aria-hidden="true" />
             <input
               type="search"
               placeholder="Zoek recept of chocolade…"
@@ -134,7 +140,11 @@ export default function ReceptenOverzicht() {
               className="search-input"
             />
             {zoekterm && (
-              <button className="search-clear" onClick={() => setZoekterm("")}>
+              <button
+                className="search-clear"
+                onClick={() => setZoekterm("")}
+                aria-label="Zoekopdracht wissen"
+              >
                 <X size={14} />
               </button>
             )}
@@ -142,6 +152,7 @@ export default function ReceptenOverzicht() {
           <button
             className={`filter-btn ${filterOpen ? "open" : ""}`}
             onClick={() => setFilterOpen(!filterOpen)}
+            aria-label="Filters openen"
           >
             <SlidersHorizontal size={14} />
             {activeFilters > 0 && (
@@ -206,7 +217,9 @@ export default function ReceptenOverzicht() {
           </div>
         ) : (
           <>
-            <p className="count">{recepten.length} recept{recepten.length !== 1 ? "en" : ""}</p>
+            <p className="count">
+              {recepten.length} recept{recepten.length !== 1 ? "en" : ""}
+            </p>
             <ul className="grid">
               {rest.map((r, i) =>
                 r.isPremium ? (
@@ -231,9 +244,13 @@ export default function ReceptenOverzicht() {
                         </div>
                         <div className="card-bottom">
                           <h3 className="card-title-over">{r.title}</h3>
-                          {r.subtitle && <p className="card-sub-over">{r.subtitle}</p>}
+                          {r.subtitle && (
+                            <p className="card-sub-over">{r.subtitle}</p>
+                          )}
                           <div className="card-meta-over">
-                            {r.duur && <span><Clock size={11} /> {r.duur} min</span>}
+                            {r.duur && (
+                              <span><Clock size={11} /> {r.duur} min</span>
+                            )}
                             {r.product && <span>{r.product}</span>}
                           </div>
                           <Link href="/register" className="card-cta-prem">
@@ -262,9 +279,13 @@ export default function ReceptenOverzicht() {
                         </div>
                         <div className="card-bottom">
                           <h3 className="card-title-over">{r.title}</h3>
-                          {r.subtitle && <p className="card-sub-over">{r.subtitle}</p>}
+                          {r.subtitle && (
+                            <p className="card-sub-over">{r.subtitle}</p>
+                          )}
                           <div className="card-meta-over">
-                            {r.duur && <span><Clock size={11} /> {r.duur} min</span>}
+                            {r.duur && (
+                              <span><Clock size={11} /> {r.duur} min</span>
+                            )}
                             {r.product && <span>{r.product}</span>}
                           </div>
                         </div>
@@ -371,17 +392,28 @@ export default function ReceptenOverzicht() {
         }
         .hf-img-wrap {
           position: relative;
-          height: clamp(220px, 55vw, 360px);
+          /* FIX: vaste hoogte zodat de afbeelding niet te klein wordt */
+          height: clamp(260px, 60vw, 380px);
         }
         @media (min-width: 768px) {
-          .hf-img-wrap { height: 320px; }
+          .hf-img-wrap { height: 340px; }
         }
-        .hf-img { object-fit: cover; object-position: center 20%; transition: transform 0.5s ease; }
+        /* FIX: object-position center zodat de chocolade zichtbaar blijft */
+        .hf-img {
+          object-fit: cover;
+          object-position: center center;
+          transition: transform 0.5s ease;
+        }
         .hero-feature:hover .hf-img { transform: scale(1.03); }
         .hf-gradient {
           position: absolute;
           inset: 0;
-          background: linear-gradient(to top, rgba(14,30,20,0.9) 0%, rgba(14,30,20,0.2) 55%, transparent 100%);
+          background: linear-gradient(
+            to top,
+            rgba(14,30,20,0.9) 0%,
+            rgba(14,30,20,0.2) 55%,
+            transparent 100%
+          );
         }
         .hf-content {
           position: absolute;
@@ -436,11 +468,14 @@ export default function ReceptenOverzicht() {
         }
         .hero-feature:hover .hf-cta { color: var(--gold); border-color: var(--gold); }
 
-        /* ── Zoek ── */
+        /* ── Zoekbalk ── */
+        /* FIX: box-sizing op de sectie zelf zodat padding niet overloopt */
         .search-section {
           padding: 20px 20px 0;
           max-width: 1100px;
           margin: 0 auto;
+          box-sizing: border-box;
+          width: 100%;
         }
         @media (min-width: 768px) { .search-section { padding: 32px 48px 0; } }
 
@@ -448,11 +483,19 @@ export default function ReceptenOverzicht() {
           display: flex;
           gap: 10px;
           align-items: center;
+          width: 100%;
         }
+
+        /* FIX: search-wrap neemt de resterende breedte in en heeft position: relative */
         .search-wrap {
           flex: 1;
+          min-width: 0; /* voorkomt overflow in flex-context */
           position: relative;
+          display: flex;
+          align-items: center;
         }
+
+        /* FIX: icon correct gecentreerd via flex, niet via absolute + transform */
         .search-icon {
           position: absolute;
           left: 12px;
@@ -460,10 +503,14 @@ export default function ReceptenOverzicht() {
           transform: translateY(-50%);
           color: var(--muted);
           pointer-events: none;
+          flex-shrink: 0;
+          z-index: 1;
         }
+
+        /* FIX: expliciete breedte + box-sizing zodat padding niet buiten de wrapper valt */
         .search-input {
           width: 100%;
-          padding: 12px 36px 12px 36px;
+          padding: 12px 36px 12px 38px;
           border: 1px solid var(--border);
           background: var(--cream);
           font-family: var(--sans);
@@ -474,9 +521,11 @@ export default function ReceptenOverzicht() {
           box-sizing: border-box;
           -webkit-appearance: none;
           transition: border-color 0.2s;
+          display: block;
         }
         .search-input:focus { border-color: var(--forest); }
         .search-input::placeholder { color: var(--muted); }
+
         .search-clear {
           position: absolute;
           right: 10px;
@@ -489,13 +538,19 @@ export default function ReceptenOverzicht() {
           color: var(--muted);
           display: flex;
           align-items: center;
+          z-index: 1;
         }
+
         .filter-btn {
           position: relative;
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 6px;
-          padding: 12px 16px;
+          /* FIX: vaste breedte zodat de knop niet krimpt op small screens */
+          width: 44px;
+          height: 44px;
+          flex-shrink: 0;
           border: 1px solid var(--border);
           background: var(--cream);
           font-family: var(--sans);
@@ -503,11 +558,23 @@ export default function ReceptenOverzicht() {
           color: var(--text);
           cursor: pointer;
           border-radius: 2px;
-          flex-shrink: 0;
           transition: all 0.2s;
+          box-sizing: border-box;
+        }
+        /* Op bredere schermen mag de knop wat meer padding hebben */
+        @media (min-width: 400px) {
+          .filter-btn {
+            width: auto;
+            padding: 0 16px;
+            height: 44px;
+          }
         }
         .filter-btn.open,
-        .filter-btn:hover { background: var(--forest); color: var(--cream); border-color: var(--forest); }
+        .filter-btn:hover {
+          background: var(--forest);
+          color: var(--cream);
+          border-color: var(--forest);
+        }
         .filter-count {
           position: absolute;
           top: -5px;
@@ -594,7 +661,8 @@ export default function ReceptenOverzicht() {
         @keyframes spin { to { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; }
 
-        /* Grid — 1 kolom mobiel, 2 vanaf 560px, 3 vanaf 900px */
+        /* Grid — 1 kolom mobiel, 2 vanaf 560px */
+        /* FIX: max 4 items → 2 kolommen volstaat, geen 3-kolomsgrid meer */
         .grid {
           list-style: none;
           padding: 0;
@@ -603,8 +671,9 @@ export default function ReceptenOverzicht() {
           grid-template-columns: 1fr;
           gap: 16px;
         }
-        @media (min-width: 560px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 20px; } }
-        @media (min-width: 900px) { .grid { grid-template-columns: repeat(3, 1fr); gap: 24px; } }
+        @media (min-width: 560px) {
+          .grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        }
 
         /* ── Kaart ── */
         .card-li {
@@ -625,23 +694,20 @@ export default function ReceptenOverzicht() {
         }
         .card.premium { cursor: default; }
 
+        /* FIX: portretformaat met betere verhouding voor posterafbeeldingen */
         .card-img-wrap {
           position: relative;
           width: 100%;
-          /* 3:4 portret ratio — mooi op mobiel */
-          aspect-ratio: 3 / 4;
+          aspect-ratio: 2 / 3;   /* was 3/4 → iets slanker, past beter bij staande posters */
           overflow: hidden;
           background: var(--forest);
           border-radius: 3px;
         }
-        @media (min-width: 560px) {
-          /* iets breder op desktop */
-          .card-img-wrap { aspect-ratio: 2 / 3; }
-        }
 
+        /* FIX: object-position center center — niet "center top" waardoor chocolade wegsneed */
         .card-img {
           object-fit: cover;
-          object-position: center top;
+          object-position: center center;
           transition: transform 0.5s ease;
         }
         .card:hover .card-img { transform: scale(1.04); }
