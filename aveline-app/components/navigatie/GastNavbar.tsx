@@ -14,7 +14,7 @@ const NAV_ITEMS = [
 export default function GastNavbar() {
   const pathname = usePathname();
 
-  if (pathname === "/welcome") return null;
+  if (pathname === "/welcome" || pathname === "/") return null;
   if (pathname === "/login") return null;
   if (pathname === "/register") return null;
   if (pathname === "/page.tsx") return null;
