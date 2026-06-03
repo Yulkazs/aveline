@@ -14,6 +14,10 @@ const NAV_ITEMS = [
 export default function GastNavbar() {
   const pathname = usePathname();
 
+  if (pathname === "/welcome") return null;
+  if (pathname === "/login") return null;
+  if (pathname === "/register") return null;
+
   function isActive(href: string) {
     if (href === "/scan") return pathname === "/scan";
     return pathname === href || pathname.startsWith(href + "/");

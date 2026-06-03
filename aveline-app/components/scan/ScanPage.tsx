@@ -92,7 +92,7 @@ export default function ScanPage({ mode = "landing" }: Props) {
         {/* Header */}
         <div className="flex items-center px-5 pt-14 pb-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push("/welcome")}
             className="w-9 h-9 rounded-full flex items-center justify-center mr-3"
             style={{ background: "#EFF5EE" }}
             aria-label="Terug"
