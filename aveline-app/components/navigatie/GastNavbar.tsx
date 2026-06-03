@@ -11,13 +11,14 @@ const NAV_ITEMS = [
   { label: "Inloggen", href: "/login",    icon: User     },
 ];
 
+// Pagina's waarop de gast-navbar NIET zichtbaar moet zijn
+const HIDDEN_ON = ["/", "/welcome", "/login", "/register"];
+
 export default function GastNavbar() {
   const pathname = usePathname();
 
-  if (pathname === "/welcome" || pathname === "/") return null;
-  if (pathname === "/login") return null;
-  if (pathname === "/register") return null;
-  if (pathname === "/page.tsx") return null;
+  // Verberg op exacte paden
+  if (HIDDEN_ON.includes(pathname)) return null;
 
   function isActive(href: string) {
     if (href === "/scan") return pathname === "/scan";
@@ -25,13 +26,9 @@ export default function GastNavbar() {
   }
 
   return (
-    // Één <div> wrapper — geen fragment (<>), voorkomt hydration error
-    // als de component direct in <body> geplaatst wordt.
     <div>
-      {/* Duwt de pagina-inhoud omhoog zodat de fixed navbar niets bedekt */}
       <div style={{ height: 64 }} aria-hidden="true" />
 
-      {/* Identieke styling als BottomNav voor andere rollen */}
       <nav
         aria-label="Navigatie"
         style={{

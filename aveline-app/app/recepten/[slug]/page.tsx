@@ -1,4 +1,3 @@
-// app/recepten/[slug]/page.tsx
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
@@ -9,8 +8,10 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET ?? "aveline-dev-secret-change-in-production"
 );
 
-function slugify(title: string) {
-  return title.toLowerCase().normalize("NFD")
+function slugify(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
@@ -52,7 +53,8 @@ async function getRecept(slug: string) {
     return {
       type: "premium" as const,
       preview: {
-        id: item.id, slug, title: item.title,
+        id: item.id, slug,
+        title: item.title,
         subtitle: meta.subtitle ?? null,
         teaser: meta.teaser ?? null,
         imageUrl: item.imageUrl,
@@ -66,7 +68,8 @@ async function getRecept(slug: string) {
   return {
     type: "ok" as const,
     recept: {
-      id: item.id, slug, title: item.title,
+      id: item.id, slug,
+      title: item.title,
       subtitle: meta.subtitle ?? null,
       difficulty: item.difficulty,
       flavor: item.flavor,
@@ -82,14 +85,49 @@ async function getRecept(slug: string) {
       certificeringen: item.product?.certifications ?? [],
       ingredienten: meta.ingredienten ?? [],
       stappen: meta.stappen ?? [],
-      product: item.product
-        ? {
-            id: item.product.id,
-            name: item.product.name,
-            slug: slugify(item.product.name),
-            imageUrl: item.product.imageUrl,
-          }
-        : null,
+      // ReceptDetail verwacht product als string en productSlug apart
+      product: item.product?.name ?? (meta.productName as string) ?? null,
+      productSlug: item.product
+        ? slugify(item.product.name)
+        : (meta.productSlug as string) ?? null,
     },
   };
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const result = await getRecept(slug);
+  if (result.type === "not_found")
+    return { title: "Recept niet gevonden — Avéline" };
+  const title =
+    result.type === "premium" ? result.preview.title : result.recept.title;
+  const description =
+    result.type === "premium" ? result.preview.teaser : result.recept.teaser;
+  return {
+    title: `${title} — Avéline Recepten`,
+    description,
+  };
+}
+
+export default async function ReceptPagina({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const result = await getRecept(slug);
+
+  if (result.type === "not_found") notFound();
+
+  if (result.type === "premium") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return <ReceptDetail recept={{ ...result.preview, isPremium: true } as any} />;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <ReceptDetail recept={result.recept as any} />;
 }

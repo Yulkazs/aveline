@@ -32,8 +32,10 @@ export default function RootLayout({
       lang="nl"
       className={`${cormorant.variable} ${dmSans.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
-      <GastNavbar />
+      <body className="min-h-full flex flex-col">
+        {children}
+        <GastNavbar />
+      </body>
     </html>
   );
 }
