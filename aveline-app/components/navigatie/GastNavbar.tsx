@@ -17,6 +17,7 @@ export default function GastNavbar() {
   if (pathname === "/welcome") return null;
   if (pathname === "/login") return null;
   if (pathname === "/register") return null;
+  if (pathname === "/page.tsx") return null;
 
   function isActive(href: string) {
     if (href === "/scan") return pathname === "/scan";
