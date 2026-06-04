@@ -1,669 +1,525 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import {
-  Play, Square, Plus, Copy, Check, Users,
-  Wifi, Trash2, ChevronDown, ChevronUp, QrCode, X, LogOut,
-} from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { ChevronDown, Check, ShoppingBag, Building2, Headphones, Megaphone, X } from "lucide-react";
+
+// Import all dashboard screens
+import DashboardB2C from "@/components/dashboard/DashboardB2C";
+import DashboardB2B from "@/components/dashboard/DashboardB2B";
+import DashboardCustomerService from "@/components/dashboard/DashboardCustomerService";
+import DashboardMarketing from "@/components/dashboard/DashboardMarketing";
+
+// Import sub-screens for in-app navigation
+import ChatOverzichtB2C from "@/components/dashboard/chat/ChatOverzichtB2C";
+import ChatOverzichtCS from "@/components/dashboard/chat/ChatOverzichtCS";
+import KlachtenClient from "@/components/dashboard/klachten/KlachtenClient";
+import PromotiesClient from "@/components/dashboard/marketing/PromotiesClient";
+import CommunityFeed from "@/components/community/CommunityFeed";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type SessionStatus = "WAITING" | "ACTIVE" | "ENDED";
+type DemoRole = "B2C_CLIENT" | "B2B_CLIENT" | "CUSTOMER_SERVICE" | "MARKETING";
+type DemoScreen =
+  | "home"
+  | "scan"
+  | "producten"
+  | "chat"
+  | "community"
+  | "profiel"
+  | "catalogus"
+  | "orders"
+  | "analytics"
+  | "klachten"
+  | "promoties"
+  | "notificaties";
 
-type Participant = {
-  id: string;
+type Props = {
   username: string;
-  createdAt: string;
+  sessionCode: string;
+  openComplaints: number;
+  activeChats: number;
 };
 
-type Session = {
-  id: string;
-  code: string;
-  status: SessionStatus;
-  createdAt: string;
-  updatedAt: string;
-  participants: Participant[];
+// ── Role config ───────────────────────────────────────────────────────────────
+const ROLES: Array<{
+  key: DemoRole;
+  label: string;
+  icon: React.ElementType;
+  description: string;
+}> = [
+  { key: "B2C_CLIENT",       label: "B2C Klant",      icon: ShoppingBag, description: "Soulaimane & Hamza" },
+  { key: "B2B_CLIENT",       label: "B2B Klant",      icon: Building2,   description: "Omar"               },
+  { key: "CUSTOMER_SERVICE", label: "Klantenservice", icon: Headphones,  description: "Esad"               },
+  { key: "MARKETING",        label: "Marketing",      icon: Megaphone,   description: "Jessica"            },
+];
+
+// ── BottomNav per role ────────────────────────────────────────────────────────
+import {
+  Home, QrCode, Package, MessageCircle, Users, User,
+  BookOpen, ShoppingCart, BarChart2, AlertCircle,
+} from "lucide-react";
+
+type NavItem = { label: string; screen: DemoScreen; icon: React.ElementType };
+
+const NAV_CONFIG: Record<DemoRole, NavItem[]> = {
+  B2C_CLIENT: [
+    { label: "Home",      screen: "home",      icon: Home          },
+    { label: "Scan",      screen: "scan",      icon: QrCode        },
+    { label: "Producten", screen: "producten", icon: Package       },
+    { label: "Chat",      screen: "chat",      icon: MessageCircle },
+    { label: "Community", screen: "community", icon: Users         },
+    { label: "Profiel",   screen: "profiel",   icon: User          },
+  ],
+  B2B_CLIENT: [
+    { label: "Home",      screen: "home",      icon: Home          },
+    { label: "Catalogus", screen: "catalogus", icon: BookOpen      },
+    { label: "Orders",    screen: "orders",    icon: ShoppingCart  },
+    { label: "Analytics", screen: "analytics", icon: BarChart2     },
+    { label: "Profiel",   screen: "profiel",   icon: User          },
+  ],
+  CUSTOMER_SERVICE: [
+    { label: "Klachten",  screen: "klachten",  icon: AlertCircle   },
+    { label: "Chat",      screen: "chat",      icon: MessageCircle },
+    { label: "Community", screen: "community", icon: Users         },
+    { label: "Profiel",   screen: "profiel",   icon: User          },
+  ],
+  MARKETING: [
+    { label: "Home",      screen: "home",      icon: Home          },
+    { label: "Promoties", screen: "promoties", icon: Megaphone     },
+    { label: "Community", screen: "community", icon: Users         },
+    { label: "Profiel",   screen: "profiel",   icon: User          },
+  ],
 };
 
-type Props = { initialSessions: Session[] };
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const STATUS_META: Record<SessionStatus, { label: string; color: string; bg: string; dot: string }> = {
-  WAITING: { label: "Wachtkamer open", color: "#D97706", bg: "#FEF3C7", dot: "#F59E0B" },
-  ACTIVE:  { label: "Actief",          color: "#16A34A", bg: "#F0FDF4", dot: "#22C55E" },
-  ENDED:   { label: "Afgelopen",       color: "#9aada2", bg: "#f5f8f5", dot: "#BDD2B7" },
-};
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("nl-NL", {
-    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-  });
-}
-
-function formatTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString("nl-NL", {
-    hour: "2-digit", minute: "2-digit",
-  });
-}
-
-function getJoinUrl(code: string): string {
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}/presentatie/${code}`;
-  }
-  return `/presentatie/${code}`;
-}
-
-// ── QR Code Modal ─────────────────────────────────────────────────────────────
-function QRModal({ code, onClose }: { code: string; onClose: () => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const joinUrl = getJoinUrl(code);
-
-  // Draw QR code using a simple canvas-based QR generator (pure JS, no library)
-  // We use the qrcode.js approach via a script injection
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Draw a styled placeholder with the URL encoded visually
-    // Since we can't import qrcode library in this env, we'll use a QR API
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    // Use a public QR code API
-    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(joinUrl)}&bgcolor=EFF5EE&color=122A1A&margin=10&format=png`;
-    img.onload = () => {
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    };
-    img.onerror = () => {
-      // Fallback: draw a styled placeholder
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.fillStyle = "#EFF5EE";
-      ctx.fillRect(0, 0, 240, 240);
-      ctx.fillStyle = "#304C3A";
-      ctx.font = "bold 14px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("QR niet beschikbaar", 120, 120);
-      ctx.font = "11px monospace";
-      ctx.fillText("Gebruik de link hieronder", 120, 140);
-    };
-  }, [joinUrl]);
-
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopyUrl() {
-    await navigator.clipboard.writeText(joinUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  async function handleDownload() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const link = document.createElement("a");
-    link.download = `aveline-sessie-${code}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  }
+// ── Demo Bottom Nav ───────────────────────────────────────────────────────────
+function DemoBottomNav({
+  role,
+  current,
+  onChange,
+}: {
+  role: DemoRole;
+  current: DemoScreen;
+  onChange: (screen: DemoScreen) => void;
+}) {
+  const items = NAV_CONFIG[role];
 
   return (
+    <nav
+      aria-label="Navigatie"
+      className="flex-shrink-0 border-t"
+      style={{
+        background: "#ffffff",
+        borderColor: "#e8ede9",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      <ul className="flex items-stretch" role="list">
+        {items.map(({ label, screen, icon: Icon }) => {
+          const active = current === screen;
+          return (
+            <li key={screen} className="flex-1">
+              <button
+                onClick={() => onChange(screen)}
+                className="flex flex-col items-center justify-center gap-1 py-3 w-full transition-opacity active:opacity-60"
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon
+                  size={22}
+                  strokeWidth={active ? 2 : 1.5}
+                  color={active ? "#304C3A" : "#9aada2"}
+                />
+                <span
+                  className="text-[10px] font-medium leading-none"
+                  style={{ color: active ? "#304C3A" : "#9aada2" }}
+                >
+                  {label}
+                </span>
+                {active && (
+                  <span
+                    className="w-1 h-1 rounded-full"
+                    style={{ background: "#51C675" }}
+                  />
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+// ── Session Ended Overlay ─────────────────────────────────────────────────────
+function SessionEndedOverlay({ sessionCode }: { sessionCode: string }) {
+  return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ background: "rgba(18,42,26,0.5)" }}
-      onClick={onClose}
+      className="fixed inset-0 z-[999] flex flex-col items-center justify-center px-8 text-center"
+      style={{ background: "rgba(18,42,26,0.92)", backdropFilter: "blur(8px)" }}
     >
       <div
-        className="w-full max-w-[430px] rounded-t-3xl overflow-hidden animate-fade-slide-up"
-        style={{ background: "#ffffff" }}
-        onClick={(e) => e.stopPropagation()}
+        className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6"
+        style={{ background: "rgba(255,255,255,0.1)" }}
       >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 pt-5 pb-4 border-b"
-          style={{ borderColor: "#f0f0f0" }}
-        >
-          <div>
-            <h2 className="font-display text-xl font-semibold" style={{ color: "#122A1A" }}>
-              QR Code
-            </h2>
-            <p className="text-xs mt-0.5" style={{ color: "#9aada2" }}>
-              Sessie <span className="font-mono font-bold">{code}</span>
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full"
-            style={{ background: "#f5f8f5" }}
-          >
-            <X size={18} color="#304C3A" />
-          </button>
-        </div>
+        <span className="text-4xl">🍫</span>
+      </div>
+      <h1
+        className="font-display text-2xl font-semibold mb-3"
+        style={{ color: "#ffffff" }}
+      >
+        Presentatie afgelopen
+      </h1>
+      <p className="text-sm leading-relaxed mb-2" style={{ color: "rgba(189,210,183,0.8)" }}>
+        De presentator heeft sessie{" "}
+        <span className="font-mono font-bold" style={{ color: "#51C675" }}>
+          {sessionCode}
+        </span>{" "}
+        beëindigd.
+      </p>
+      <p className="text-xs" style={{ color: "rgba(189,210,183,0.5)" }}>
+        Bedankt voor je deelname!
+      </p>
+    </div>
+  );
+}
 
-        {/* QR Code */}
-        <div className="flex flex-col items-center px-5 py-6">
-          {/* Canvas with Avéline branding frame */}
-          <div
-            className="relative rounded-3xl p-4 mb-5"
-            style={{
-              background: "#EFF5EE",
-              border: "2px solid #BDD2B7",
-              boxShadow: "0 8px 32px rgba(48,76,58,0.12)",
-            }}
-          >
-            {/* Logo top */}
-            <div className="flex justify-center mb-3">
-              <div
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full"
-                style={{ background: "#304C3A" }}
-              >
-                <span className="text-base">🍫</span>
-                <span
-                  className="text-xs font-semibold tracking-wide"
-                  style={{ color: "#ffffff" }}
-                >
-                  Avéline Demo
-                </span>
-              </div>
-            </div>
-
-            {/* QR Canvas */}
-            <canvas
-              ref={canvasRef}
-              width={240}
-              height={240}
-              className="rounded-2xl"
-              style={{ display: "block" }}
-            />
-
-            {/* Session code bottom */}
-            <div className="flex justify-center mt-3">
-              <span
-                className="font-mono text-lg font-bold tracking-widest px-4 py-1.5 rounded-xl"
-                style={{ background: "#304C3A", color: "#51C675" }}
-              >
-                {code}
-              </span>
-            </div>
-          </div>
-
-          {/* Instructions */}
-          <p className="text-sm text-center mb-5" style={{ color: "#7a8f82" }}>
-            Scan met je telefoon om deel te nemen aan de demo-presentatie.
-          </p>
-
-          {/* URL row */}
-          <div
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl mb-4"
-            style={{ background: "#f5f8f5", border: "1px dashed #BDD2B7" }}
-          >
-            <span className="text-xs flex-1 truncate font-mono" style={{ color: "#304C3A" }}>
-              {joinUrl}
-            </span>
-            <button
-              onClick={handleCopyUrl}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full flex-shrink-0 transition-all"
-              style={{
-                background: copied ? "#EFF5EE" : "#e8ede9",
-                color: copied ? "#304C3A" : "#7a8f82",
-              }}
-            >
-              {copied ? <Check size={11} /> : <Copy size={11} />}
-              {copied ? "Gekopieerd!" : "Kopieer"}
-            </button>
-          </div>
-
-          {/* Download button */}
-          <button
-            onClick={handleDownload}
-            className="w-full py-3.5 rounded-2xl text-sm font-semibold mb-8"
-            style={{ background: "#304C3A", color: "#ffffff", border: "none" }}
-          >
-            QR Code downloaden
-          </button>
-        </div>
+// ── Demo Screen Placeholder ───────────────────────────────────────────────────
+function DemoPlaceholder({ title, icon: Icon }: { title: string; icon: React.ElementType }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-5 pb-20">
+      <div
+        className="w-16 h-16 rounded-2xl flex items-center justify-center"
+        style={{ background: "#EFF5EE" }}
+      >
+        <Icon size={28} color="#BDD2B7" strokeWidth={1.25} />
+      </div>
+      <div>
+        <p className="text-base font-semibold mb-1" style={{ color: "#304C3A" }}>
+          {title}
+        </p>
+        <p className="text-sm leading-relaxed" style={{ color: "#9aada2" }}>
+          Demo modus — volledige functionaliteit beschikbaar in de echte app.
+        </p>
       </div>
     </div>
   );
 }
 
-// ── Copy button ───────────────────────────────────────────────────────────────
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
+// ── Role switcher dropdown ────────────────────────────────────────────────────
+function RoleSwitcher({
+  current,
+  onChange,
+}: {
+  current: DemoRole;
+  onChange: (role: DemoRole) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const currentRole = ROLES.find((r) => r.key === current)!;
+  const CurrentIcon = currentRole.icon;
 
-  async function handleCopy() {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   return (
-    <button
-      onClick={handleCopy}
-      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-all flex-shrink-0"
-      style={{
-        background: copied ? "#EFF5EE" : "#e8ede9",
-        color: copied ? "#304C3A" : "#7a8f82",
-      }}
-    >
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-      {copied ? "Gekopieerd!" : "Kopieer"}
-    </button>
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all active:scale-95"
+        style={{ background: open ? "#EFF5EE" : "#f5f8f5" }}
+      >
+        <CurrentIcon size={15} color="#304C3A" strokeWidth={1.75} />
+        <span className="text-xs font-semibold" style={{ color: "#122A1A" }}>
+          {currentRole.label}
+        </span>
+        <ChevronDown
+          size={13}
+          color="#9aada2"
+          style={{
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 200ms",
+          }}
+        />
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-2 w-60 rounded-2xl overflow-hidden border z-50"
+          style={{
+            background: "#ffffff",
+            borderColor: "#e8ede9",
+            boxShadow: "0 8px 32px rgba(18,42,26,0.12)",
+          }}
+        >
+          <div className="px-4 py-2.5 border-b" style={{ borderColor: "#f0f0f0" }}>
+            <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#9aada2" }}>
+              Rol wisselen
+            </p>
+          </div>
+
+          {ROLES.map((role) => {
+            const active = role.key === current;
+            const Icon = role.icon;
+            return (
+              <button
+                key={role.key}
+                onClick={() => { onChange(role.key); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                style={{
+                  background: active ? "#f5f8f5" : "#ffffff",
+                  borderBottom: "1px solid #f8f8f8",
+                }}
+              >
+                <div
+                  className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: active ? "#EFF5EE" : "#f5f8f5" }}
+                >
+                  <Icon size={15} color="#304C3A" strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: active ? "#304C3A" : "#122A1A" }}>
+                    {role.label}
+                  </p>
+                  <p className="text-[10px]" style={{ color: "#9aada2" }}>{role.description}</p>
+                </div>
+                {active && <Check size={14} color="#304C3A" className="flex-shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
-// ── Session card ──────────────────────────────────────────────────────────────
-function SessionCard({
-  session: initial,
-  onUpdate,
-  onDelete,
-}: {
-  session: Session;
-  onUpdate: (updated: Session) => void;
-  onDelete: (id: string) => void;
-}) {
-  const [session, setSession] = useState(initial);
-  const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  const [showQR, setShowQR] = useState(false);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+// ── Main component ────────────────────────────────────────────────────────────
+export default function PresentatieDashboard({
+  username,
+  sessionCode,
+  openComplaints,
+  activeChats,
+}: Props) {
+  const [role, setRole] = useState<DemoRole>("B2C_CLIENT");
+  const [screen, setScreen] = useState<DemoScreen>("home");
+  const [sessionEnded, setSessionEnded] = useState(false);
 
-  // Poll while WAITING or ACTIVE
+  // Poll session status every 3 seconds to detect when admin ends the session
   useEffect(() => {
-    if (session.status === "ENDED") return;
-
-    async function poll() {
-      const res = await fetch(`/api/presentation/sessions/${session.code}`).catch(() => null);
+    async function checkStatus() {
+      const res = await fetch(`/api/presentation/sessions/${sessionCode}`).catch(() => null);
       if (!res?.ok) return;
       const data = await res.json();
-      setSession(data);
-      onUpdate(data);
+      if (data.status === "ENDED") {
+        setSessionEnded(true);
+      }
     }
 
-    poll();
-    pollingRef.current = setInterval(poll, 3000);
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
-  }, [session.code, session.status, onUpdate]);
+    checkStatus();
+    const interval = setInterval(checkStatus, 3000);
+    return () => clearInterval(interval);
+  }, [sessionCode]);
 
-  async function updateStatus(newStatus: SessionStatus) {
-    setLoading(true);
-    const res = await fetch(`/api/presentation/sessions/${session.code}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    }).catch(() => null);
+  // When role changes, go back to home screen
+  function handleRoleChange(newRole: DemoRole) {
+    setRole(newRole);
+    setScreen("home");
+  }
 
-    if (res?.ok) {
-      const data = await res.json();
-      setSession(data.session);
-      onUpdate(data.session);
+  // Render the correct screen for the current role & screen selection
+  function renderScreen() {
+    // HOME screen = the role-specific dashboard
+    if (screen === "home") {
+      switch (role) {
+        case "B2C_CLIENT":
+          return (
+            <DashboardB2C
+              firstName={username}
+              points={120}
+            />
+          );
+        case "B2B_CLIENT":
+          return (
+            <DashboardB2B
+              firstName={username}
+              recentOrders={[]}
+            />
+          );
+        case "CUSTOMER_SERVICE":
+          return (
+            <DashboardCustomerService
+              firstName={username}
+              openComplaints={openComplaints}
+              activeChats={activeChats}
+            />
+          );
+        case "MARKETING":
+          return <DashboardMarketing firstName={username} />;
+      }
     }
-    setLoading(false);
-  }
 
-  async function handleDelete() {
-    if (!confirm(`Sessie ${session.code} verwijderen?`)) return;
-    await fetch(`/api/presentation/sessions/${session.code}`, { method: "DELETE" });
-    onDelete(session.id);
-  }
+    // Sub-screens
+    if (screen === "chat") {
+      if (role === "CUSTOMER_SERVICE") {
+        return <DemoPlaceholder title="Live Chat" icon={MessageCircle} />;
+      }
+      return <DemoPlaceholder title="Chats" icon={MessageCircle} />;
+    }
 
-  const meta = STATUS_META[session.status];
-  const joinUrl = getJoinUrl(session.code);
+    if (screen === "klachten") {
+      return <DemoPlaceholder title="Klachten" icon={AlertCircle} />;
+    }
 
-  return (
-    <>
-      <div
-        className="rounded-2xl overflow-hidden border"
-        style={{ borderColor: "#e8ede9", background: "#ffffff" }}
-      >
-        {/* Card header */}
-        <div className="p-5">
-          {/* Code + status */}
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div>
-              <span
-                className="font-mono text-2xl font-bold tracking-widest"
-                style={{ color: "#122A1A" }}
-              >
-                {session.code}
-              </span>
-              <p className="text-xs mt-0.5" style={{ color: "#9aada2" }}>
-                {formatDate(session.createdAt)}
-              </p>
-            </div>
-            <span
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0"
-              style={{ background: meta.bg, color: meta.color }}
-            >
-              <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{
-                  background: meta.dot,
-                  animation: session.status === "ACTIVE" ? "dot-pulse 1.5s infinite" : "none",
-                }}
-              />
-              {meta.label}
-            </span>
-          </div>
+    if (screen === "promoties") {
+      return <DemoPlaceholder title="Promoties" icon={Megaphone} />;
+    }
 
-          {/* Participant count */}
+    if (screen === "community") {
+      return <DemoPlaceholder title="Community" icon={Users} />;
+    }
+
+    if (screen === "scan") {
+      return (
+        <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-5 pb-20">
           <div
-            className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl"
-            style={{ background: "#f5f8f5" }}
+            className="w-24 h-24 rounded-3xl flex items-center justify-center"
+            style={{ background: "#EFF5EE" }}
           >
-            <Users size={14} color="#304C3A" />
-            <span className="text-sm font-medium" style={{ color: "#304C3A" }}>
-              {session.participants.length} deelnemer{session.participants.length !== 1 ? "s" : ""}
-            </span>
-            {session.status !== "ENDED" && (
-              <span className="ml-auto text-[10px] font-medium" style={{ color: "#BDD2B7" }}>
-                live ●
-              </span>
-            )}
+            <QrCode size={40} color="#304C3A" strokeWidth={1.25} />
           </div>
-
-          {/* Join link */}
-          {session.status !== "ENDED" && (
-            <div
-              className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-4"
-              style={{ background: "#EFF5EE", border: "1px dashed #BDD2B7" }}
-            >
-              <span className="text-xs flex-1 truncate font-mono" style={{ color: "#304C3A" }}>
-                {joinUrl}
-              </span>
-              <CopyButton text={joinUrl} />
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex gap-2">
-            {session.status === "WAITING" && (
-              <button
-                onClick={() => updateStatus("ACTIVE")}
-                disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white transition-all active:scale-95"
-                style={{ background: loading ? "#BDD2B7" : "#304C3A" }}
-              >
-                <Play size={15} fill="white" />
-                Presentatie starten
-              </button>
-            )}
-
-            {session.status === "ACTIVE" && (
-              <button
-                onClick={() => updateStatus("ENDED")}
-                disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95"
-                style={{
-                  background: "#FEF2F2",
-                  color: "#DC2626",
-                  border: "1.5px solid #FECACA",
-                }}
-              >
-                <Square size={15} />
-                Presentatie stoppen
-              </button>
-            )}
-
-            {session.status === "ENDED" && (
-              <div
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm"
-                style={{ background: "#f5f8f5", color: "#9aada2" }}
-              >
-                Sessie afgelopen
+          <div>
+            <p className="text-base font-semibold mb-1" style={{ color: "#304C3A" }}>
+              QR Scanner
+            </p>
+            <p className="text-sm leading-relaxed" style={{ color: "#9aada2" }}>
+              Scan een QR-code op een Avéline product om informatie, recepten en gamification-punten te ontvangen.
+            </p>
+          </div>
+          <div
+            className="w-full rounded-2xl p-4 text-left"
+            style={{ background: "#f5f8f5", border: "1.5px solid #e8ede9" }}
+          >
+            <p className="text-xs font-semibold mb-2" style={{ color: "#304C3A" }}>
+              Wat gebeurt er na scannen?
+            </p>
+            {[
+              "Product details & certificeringen",
+              "+10 gamification punten",
+              "Persoonlijke aanbevelingen",
+              "Klacht indienen optie",
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-2 py-1">
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#51C675" }} />
+                <span className="text-xs" style={{ color: "#7a8f82" }}>{item}</span>
               </div>
-            )}
-
-            {/* QR Code button */}
-            {session.status !== "ENDED" && (
-              <button
-                onClick={() => setShowQR(true)}
-                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-95"
-                style={{ background: "#EFF5EE" }}
-                aria-label="QR code tonen"
-              >
-                <QrCode size={16} color="#304C3A" />
-              </button>
-            )}
-
-            {/* Expand participants */}
-            <button
-              onClick={() => setExpanded((e) => !e)}
-              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-95"
-              style={{ background: "#f5f8f5" }}
-              aria-label="Deelnemers tonen"
-            >
-              {expanded
-                ? <ChevronUp size={16} color="#304C3A" />
-                : <ChevronDown size={16} color="#304C3A" />
-              }
-            </button>
-
-            {/* Delete */}
-            <button
-              onClick={handleDelete}
-              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-95"
-              style={{ background: "#FEF2F2" }}
-              aria-label="Verwijderen"
-            >
-              <Trash2 size={15} color="#DC2626" />
-            </button>
+            ))}
           </div>
         </div>
-
-        {/* Participants list */}
-        {expanded && (
-          <div
-            className="border-t px-5 py-4"
-            style={{ borderColor: "#f0f0f0", background: "#fafafa" }}
-          >
-            <p
-              className="text-[10px] font-semibold uppercase tracking-widest mb-3"
-              style={{ color: "#9aada2" }}
-            >
-              Deelnemers
-            </p>
-            {session.participants.length === 0 ? (
-              <p className="text-xs" style={{ color: "#9aada2" }}>
-                Nog niemand ingelogd.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {session.participants.map((p) => (
-                  <div key={p.id} className="flex items-center gap-2">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                      style={{ background: "#BDD2B7", color: "#304C3A" }}
-                    >
-                      {p.username.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-sm flex-1" style={{ color: "#122A1A" }}>
-                      {p.username}
-                    </span>
-                    <span className="text-[10px]" style={{ color: "#9aada2" }}>
-                      {formatTime(p.createdAt)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <style>{`
-          @keyframes dot-pulse {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.3; }
-          }
-        `}</style>
-      </div>
-
-      {/* QR Modal */}
-      {showQR && (
-        <QRModal
-          code={session.code}
-          onClose={() => setShowQR(false)}
-        />
-      )}
-    </>
-  );
-}
-
-// ── Main ──────────────────────────────────────────────────────────────────────
-export default function PresentatieBeheer({ initialSessions }: Props) {
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = useState(false);
-
-  async function handleLogout() {
-    setLoggingOut(true);
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  }
-  const [sessions, setSessions] = useState<Session[]>(initialSessions);
-  const [creating, setCreating] = useState(false);
-  const [newSessionCode, setNewSessionCode] = useState<string | null>(null);
-
-  const hasActiveOrWaiting = sessions.some(
-    (s) => s.status === "WAITING" || s.status === "ACTIVE"
-  );
-
-  async function handleCreate() {
-    setCreating(true);
-    const res = await fetch("/api/presentation/sessions", {
-      method: "POST",
-    }).catch(() => null);
-
-    if (res?.ok) {
-      const data = await res.json();
-      setSessions((prev) => [data.session, ...prev]);
-      // Automatically show QR code for the new session
-      setNewSessionCode(data.session.code);
+      );
     }
-    setCreating(false);
-  }
 
-  function handleUpdate(updated: Session) {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === updated.id ? updated : s))
-    );
-  }
+    if (screen === "producten") {
+      return <DemoPlaceholder title="Mijn Producten" icon={Package} />;
+    }
 
-  function handleDelete(id: string) {
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-  }
+    if (screen === "catalogus") {
+      return <DemoPlaceholder title="Productcatalogus" icon={BookOpen} />;
+    }
 
-  return (
-    <>
-      <div className="flex flex-col h-full bg-white overflow-y-auto">
-        {/* Header */}
-        <div
-          className="flex-shrink-0 px-5 pt-14 pb-6 border-b"
-          style={{ borderColor: "#f0f0f0" }}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h1 className="font-display text-3xl font-semibold" style={{ color: "#122A1A" }}>
-                Presentatie
-              </h1>
-              <p className="text-sm mt-1" style={{ color: "#7a8f82" }}>
-                Beheer live demo-sessies
-              </p>
-            </div>
+    if (screen === "orders") {
+      return <DemoPlaceholder title="Bestellingen" icon={ShoppingCart} />;
+    }
 
-            <div className="flex items-center gap-2">
-              {sessions.some((s) => s.status === "ACTIVE") && (
-                <div
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                  style={{ background: "#F0FDF4" }}
+    if (screen === "analytics") {
+      return <DemoPlaceholder title="Analytics" icon={BarChart2} />;
+    }
+
+    if (screen === "profiel") {
+      return (
+        <div className="flex flex-col h-full overflow-y-auto pb-20">
+          <div className="flex-shrink-0 flex items-center justify-between px-5 pt-14 pb-4">
+            <h1 className="font-display text-2xl font-semibold" style={{ color: "#122A1A" }}>Profiel</h1>
+          </div>
+          <div className="px-5 flex flex-col gap-4">
+            <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: "#f5f8f5" }}>
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center font-semibold text-lg flex-shrink-0"
+                style={{ background: "#BDD2B7", color: "#304C3A" }}
+              >
+                {username.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="font-semibold text-base" style={{ color: "#122A1A" }}>{username}</p>
+                <p className="text-sm mt-0.5" style={{ color: "#7a8f82" }}>demo@aveline.nl</p>
+                <span
+                  className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1.5"
+                  style={{ background: "#e8f0e5", color: "#304C3A" }}
                 >
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ background: "#22C55E", animation: "dot-pulse 1.5s infinite" }}
-                  />
-                  <span className="text-xs font-semibold" style={{ color: "#16A34A" }}>
-                    Live
-                  </span>
-                </div>
-              )}
-              <button
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all active:scale-95"
-                style={{ background: "#FEF2F2", color: "#DC2626" }}
-                aria-label="Uitloggen"
-              >
-                <LogOut size={14} strokeWidth={2} />
-                {loggingOut ? "…" : "Uitloggen"}
-              </button>
+                  Demo gebruiker
+                </span>
+              </div>
+            </div>
+            <div className="rounded-2xl p-4 flex items-center justify-between" style={{ background: "#304C3A" }}>
+              <div>
+                <p className="text-xs" style={{ color: "rgba(189,210,183,0.8)" }}>Totaal punten</p>
+                <p className="text-2xl font-semibold font-display" style={{ color: "#ffffff" }}>120</p>
+              </div>
+              <span className="text-3xl">⭐</span>
             </div>
           </div>
         </div>
+      );
+    }
 
-        {/* Content */}
-        <div className="flex-1 px-5 py-6">
-          {/* New session button */}
-          <button
-            onClick={handleCreate}
-            disabled={creating || hasActiveOrWaiting}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-semibold text-sm mb-2 transition-all active:scale-95"
-            style={{
-              background: creating || hasActiveOrWaiting ? "#f5f8f5" : "#304C3A",
-              color:      creating || hasActiveOrWaiting ? "#9aada2" : "#ffffff",
-            }}
+    if (screen === "notificaties") {
+      return <DemoPlaceholder title="Notificaties" icon={MessageCircle} />;
+    }
+
+    return null;
+  }
+
+  return (
+    <div className="mobile-shell" style={{ position: "relative" }}>
+      {/* Session ended full-screen overlay */}
+      {sessionEnded && <SessionEndedOverlay sessionCode={sessionCode} />}
+
+      {/* Role switcher top bar */}
+      <div
+        className="flex-shrink-0 flex items-center justify-between px-4 py-2.5 border-b"
+        style={{ background: "#ffffff", borderColor: "#e8ede9", zIndex: 40 }}
+      >
+        <div className="flex items-center gap-2">
+          <div
+            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+            style={{ background: "#BDD2B7", color: "#304C3A" }}
           >
-            <Plus size={18} strokeWidth={2.5} />
-            {creating ? "Aanmaken…" : "Nieuwe sessie aanmaken"}
-          </button>
-
-          {hasActiveOrWaiting && (
-            <p className="text-xs text-center mb-6" style={{ color: "#BDD2B7" }}>
-              Sluit de huidige sessie voordat je een nieuwe aanmaakt.
-            </p>
-          )}
-
-          <div className="mt-6 flex flex-col gap-4">
-            {sessions.length === 0 ? (
-              <div
-                className="rounded-2xl p-10 flex flex-col items-center text-center"
-                style={{ background: "#f5f8f5" }}
-              >
-                <Wifi size={28} color="#BDD2B7" strokeWidth={1.25} className="mb-3" />
-                <p className="text-sm font-semibold mb-1" style={{ color: "#304C3A" }}>
-                  Geen sessies
-                </p>
-                <p className="text-xs" style={{ color: "#9aada2" }}>
-                  Maak een nieuwe sessie aan om te beginnen.
-                </p>
-              </div>
-            ) : (
-              sessions.map((s) => (
-                <SessionCard
-                  key={s.id}
-                  session={s}
-                  onUpdate={handleUpdate}
-                  onDelete={handleDelete}
-                />
-              ))
-            )}
+            {username.charAt(0).toUpperCase()}
           </div>
+          <span className="text-xs font-medium" style={{ color: "#7a8f82" }}>
+            {username}
+          </span>
+          <span
+            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+            style={{ background: "#EFF5EE", color: "#304C3A" }}
+          >
+            DEMO
+          </span>
         </div>
+
+        <RoleSwitcher current={role} onChange={handleRoleChange} />
       </div>
 
-      {/* Auto-show QR for newly created session */}
-      {newSessionCode && (
-        <QRModal
-          code={newSessionCode}
-          onClose={() => setNewSessionCode(null)}
-        />
-      )}
+      {/* Dashboard content */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {renderScreen()}
+      </div>
 
-      <style>{`
-        @keyframes dot-pulse {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.3; }
-        }
-      `}</style>
-    </>
+      {/* Demo Bottom Nav — intercepts all navigation, no page reloads */}
+      <DemoBottomNav role={role} current={screen} onChange={setScreen} />
+    </div>
   );
 }
