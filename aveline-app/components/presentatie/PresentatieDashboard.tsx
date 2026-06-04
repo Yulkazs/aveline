@@ -7,7 +7,7 @@ import {
   BookOpen, ShoppingCart, BarChart2, AlertCircle, ChevronLeft,
   ChevronRight, Clock, CheckCircle2, Truck, XCircle, RefreshCw,
   Calendar, MapPin, Hash, Percent, Tag, Search, Send, Bot,
-  Star, Wifi, FileText, LogOut, X,
+  Star, Wifi, FileText, LogOut, X, Lock, Settings
 } from "lucide-react";
 
 import DashboardB2C from "@/components/dashboard/DashboardB2C";
@@ -255,50 +255,319 @@ function ScanScreen() {
   );
 }
 
+// ── Analytics scherm ─────────────────────────────────────────────────────────
+function AnalyticsScreen() {
+  const [period, setPeriod] = useState<"30d" | "3m" | "1j">("3m");
+
+  const PERIODS = [
+    { key: "30d" as const, label: "30 dagen" },
+    { key: "3m"  as const, label: "3 maanden" },
+    { key: "1j"  as const, label: "1 jaar" },
+  ];
+
+  // Filter orders op periode
+  const cutoff = period === "30d"
+    ? new Date(Date.now() - 30 * 86400000)
+    : period === "3m"
+    ? new Date(Date.now() - 90 * 86400000)
+    : new Date(Date.now() - 365 * 86400000);
+
+  const filtered = DEMO_ANALYTICS_ORDERS.filter(o => new Date(o.createdAt) >= cutoff);
+
+  const totalSpend = filtered.reduce((s, o) => s + parseFloat(o.totalAmount), 0);
+  const totalOrders = filtered.length;
+
+  // Producttotalen
+  const productMap = new Map<string, { name: string; qty: number }>();
+  filtered.forEach(order => {
+    order.items.forEach(item => {
+      const ex = productMap.get(item.product.id);
+      if (ex) ex.qty += item.quantity;
+      else productMap.set(item.product.id, { name: item.product.name, qty: item.quantity });
+    });
+  });
+  const topProducts = [...productMap.values()].sort((a, b) => b.qty - a.qty).slice(0, 4);
+  const maxQty = Math.max(...topProducts.map(p => p.qty), 1);
+
+  // Chart data (maanden)
+  const monthCount = period === "30d" ? 1 : period === "3m" ? 3 : 12;
+  const chartData: { label: string; value: number }[] = [];
+  for (let i = monthCount - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const label = d.toLocaleDateString("nl-NL", { month: "short", year: "2-digit" });
+    const count = filtered.filter(o => {
+      const od = new Date(o.createdAt);
+      return od.toLocaleDateString("nl-NL", { month: "short", year: "2-digit" }) === label;
+    }).length;
+    chartData.push({ label, value: count });
+  }
+  const maxBar = Math.max(...chartData.map(d => d.value), 1);
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      <div className="flex-shrink-0 flex items-center gap-3 px-5 pt-14 pb-4 border-b" style={{ borderColor: "#f0f0f0" }}>
+        <h1 className="font-display text-xl font-semibold" style={{ color: "#122A1A" }}>Analytics</h1>
+        <p className="text-xs ml-1" style={{ color: "#9aada2" }}>Inkoopoverzicht</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 pb-8">
+        {/* Periode filter */}
+        <div className="flex gap-2 mt-4 mb-5">
+          {PERIODS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setPeriod(key)}
+              className="flex-1 text-xs font-medium py-2 rounded-full"
+              style={period === key
+                ? { background: "#304C3A", color: "#ffffff", border: "none" }
+                : { background: "#f5f8f5", color: "#7a8f82", border: "none" }
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: "#EFF5EE" }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(48,76,58,0.1)" }}>
+              <TrendingUp size={18} color="#304C3A" strokeWidth={1.75} />
+            </div>
+            <div>
+              <p className="text-2xl font-semibold font-display" style={{ color: "#304C3A" }}>€{totalSpend.toFixed(2)}</p>
+              <p className="text-xs mt-0.5" style={{ color: "#7a8f82" }}>Totaal besteed</p>
+            </div>
+          </div>
+          <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: "#F5F3FF" }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(91,33,182,0.1)" }}>
+              <ShoppingCart size={18} color="#5B21B6" strokeWidth={1.75} />
+            </div>
+            <div>
+              <p className="text-2xl font-semibold font-display" style={{ color: "#5B21B6" }}>{totalOrders}</p>
+              <p className="text-xs mt-0.5" style={{ color: "#7a8f82" }}>Bestellingen</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bar chart */}
+        <div className="rounded-2xl p-4 mb-6" style={{ background: "#f5f8f5" }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: "#9aada2" }}>
+            Bestellingen per maand
+          </p>
+          <div className="flex items-end gap-1.5 h-32 w-full">
+            {chartData.map((d) => (
+              <div key={d.label} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                <div className="w-full flex items-end justify-center" style={{ height: 96 }}>
+                  <div
+                    className="w-full rounded-t-lg transition-all"
+                    style={{
+                      height: `${Math.max((d.value / maxBar) * 96, d.value > 0 ? 6 : 0)}px`,
+                      background: d.value > 0 ? "#304C3A" : "#f0f0f0",
+                    }}
+                  />
+                </div>
+                <span className="text-[9px] truncate w-full text-center" style={{ color: "#9aada2" }}>
+                  {d.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top producten */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "#9aada2" }}>
+            Meest besteld
+          </p>
+          <div className="flex flex-col gap-2">
+            {topProducts.map((product, i) => (
+              <div
+                key={product.name}
+                className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                style={{ background: "#f5f8f5" }}
+              >
+                <span className="text-xs font-semibold w-5 text-center flex-shrink-0" style={{ color: i === 0 ? "#304C3A" : "#BDD2B7" }}>
+                  {i + 1}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: "#122A1A" }}>{product.name}</p>
+                  <div className="mt-1.5 h-1 rounded-full" style={{ background: "#e0e8e0" }}>
+                    <div
+                      className="h-1 rounded-full"
+                      style={{
+                        width: `${(product.qty / maxQty) * 100}%`,
+                        background: i === 0 ? "#304C3A" : "#BDD2B7",
+                      }}
+                    />
+                  </div>
+                </div>
+                <span className="text-sm font-semibold flex-shrink-0" style={{ color: "#304C3A" }}>
+                  {product.qty}×
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Profiel scherm ────────────────────────────────────────────────────────────
+const DEMO_BADGES = [
+  { type: "FIRST_SCAN",      name: "Eerste scan",        emoji: "🔍", earned: true,  earnedDaysAgo: 14 },
+  { type: "FIRST_POST",      name: "Community starter",  emoji: "💬", earned: true,  earnedDaysAgo: 9  },
+  { type: "LOYAL_CUSTOMER",  name: "Trouwe klant",       emoji: "🤝", earned: true,  earnedDaysAgo: 5  },
+  { type: "PRODUCT_EXPLORER",name: "Product explorer",   emoji: "🏆", earned: false, earnedDaysAgo: 0  },
+  { type: "COMMUNITY_STAR",  name: "Community ster",     emoji: "⭐", earned: false, earnedDaysAgo: 0  },
+  { type: "FIRST_COMPLAINT", name: "Eerste klacht",      emoji: "📋", earned: false, earnedDaysAgo: 0  },
+];
+
 function ProfielScreen({ username }: { username: string }) {
+  const [selectedBadge, setSelectedBadge] = useState<typeof DEMO_BADGES[0] | null>(null);
+  const earnedCount = DEMO_BADGES.filter(b => b.earned).length;
+
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20">
-      <div className="flex-shrink-0 flex items-center justify-between px-5 pt-14 pb-4">
-        <h1 className="font-display text-2xl font-semibold" style={{ color: "#122A1A" }}>Profiel</h1>
-      </div>
-      <div className="px-5 flex flex-col gap-4">
-        <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: "#f5f8f5" }}>
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center font-semibold text-lg flex-shrink-0"
-            style={{ background: "#BDD2B7", color: "#304C3A" }}
-          >
-            {username.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <p className="font-semibold text-base" style={{ color: "#122A1A" }}>{username}</p>
-            <p className="text-sm mt-0.5" style={{ color: "#7a8f82" }}>demo@aveline.nl</p>
-            <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1.5" style={{ background: "#e8f0e5", color: "#304C3A" }}>
-              Demo gebruiker
-            </span>
-          </div>
-        </div>
-        <div className="rounded-2xl p-4 flex items-center justify-between" style={{ background: "#304C3A" }}>
-          <div>
-            <p className="text-xs" style={{ color: "rgba(189,210,183,0.8)" }}>Totaal punten</p>
-            <p className="text-2xl font-semibold font-display" style={{ color: "#ffffff" }}>120</p>
-          </div>
-          <span className="text-3xl">⭐</span>
-        </div>
-        <div className="rounded-2xl p-4 flex flex-col gap-2" style={{ border: "1.5px solid #e8ede9" }}>
-          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#9aada2" }}>Statistieken</p>
-          {[
-            { label: "Producten gescand", value: "7" },
-            { label: "Community posts",   value: "2" },
-            { label: "Badges verdiend",   value: "3" },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between py-1">
-              <span className="text-sm" style={{ color: "#304C3A" }}>{label}</span>
-              <span className="text-sm font-semibold" style={{ color: "#122A1A" }}>{value}</span>
+      {/* ... bestaande header + identiteitskaart ... */}
+
+      {/* Badge sectie */}
+      <div className="px-5 mb-6">
+        <div className="rounded-2xl p-4 flex items-center justify-between mb-4" style={{ background: "#304C3A" }}>
+          <div className="flex items-center gap-3">
+            <Star size={18} color="#51C675" fill="#51C675" />
+            <div>
+              <p className="text-xs" style={{ color: "rgba(189,210,183,0.8)" }}>Totaal punten</p>
+              <p className="text-2xl font-semibold font-display" style={{ color: "#ffffff" }}>120</p>
             </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs" style={{ color: "rgba(189,210,183,0.8)" }}>Badges</p>
+            <p className="text-2xl font-semibold font-display" style={{ color: "#BDD2B7" }}>
+              {earnedCount}<span className="text-sm">/{DEMO_BADGES.length}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-base" style={{ color: "#122A1A" }}>Mijn Badges</h2>
+          <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: "#EFF5EE", color: "#304C3A" }}>
+            {earnedCount} verdiend
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          {DEMO_BADGES.map((badge) => (
+            <button
+              key={badge.type}
+              onClick={() => setSelectedBadge(badge)}
+              className="flex flex-col items-center gap-2.5 p-4 rounded-2xl transition-all active:scale-95"
+              style={{ background: badge.earned ? "#EFF5EE" : "#f5f5f5" }}
+            >
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl relative"
+                style={{ background: badge.earned ? "#304C3A" : "#e0e0e0", opacity: badge.earned ? 1 : 0.7 }}
+              >
+                {badge.earned
+                  ? <span>{badge.emoji}</span>
+                  : <Lock size={20} color="#aaaaaa" strokeWidth={1.75} />
+                }
+                {badge.earned && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white" style={{ background: "#51C675" }} />
+                )}
+              </div>
+              <span className="text-xs font-medium text-center leading-snug w-full" style={{ color: badge.earned ? "#304C3A" : "#aaaaaa" }}>
+                {badge.name}
+              </span>
+            </button>
           ))}
         </div>
       </div>
+
+      {/* Badge detail sheet */}
+      {selectedBadge && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ background: "rgba(18,42,26,0.5)" }}
+          onClick={() => setSelectedBadge(null)}
+        >
+          <div
+            className="w-full max-w-[430px] rounded-t-3xl overflow-hidden"
+            style={{ background: "#ffffff" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="relative flex flex-col items-center pt-8 pb-6 px-6"
+              style={{ background: selectedBadge.earned ? "#304C3A" : "#f0f0f0" }}
+            >
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full" style={{ background: selectedBadge.earned ? "rgba(255,255,255,0.25)" : "#d0d0d0" }} />
+              <div
+                className="w-24 h-24 rounded-3xl flex items-center justify-center mb-4"
+                style={{ background: selectedBadge.earned ? "rgba(255,255,255,0.12)" : "#e0e0e0", fontSize: 44 }}
+              >
+                {selectedBadge.earned
+                  ? <span>{selectedBadge.emoji}</span>
+                  : <Lock size={36} color="#b0b0b0" strokeWidth={1.5} />
+                }
+              </div>
+              <span
+                className="text-xs font-semibold px-3 py-1 rounded-full mb-3"
+                style={selectedBadge.earned ? { background: "#51C675", color: "#ffffff" } : { background: "#d8d8d8", color: "#888888" }}
+              >
+                {selectedBadge.earned ? "✓ Verdiend" : "Nog niet verdiend"}
+              </span>
+              <h2 className="font-display text-2xl font-semibold text-center" style={{ color: selectedBadge.earned ? "#ffffff" : "#aaaaaa" }}>
+                {selectedBadge.name}
+              </h2>
+            </div>
+            <div className="px-6 pt-5 pb-8">
+              {selectedBadge.earned ? (
+                <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-5" style={{ background: "#EFF5EE" }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#304C3A" }}>
+                    <Star size={16} color="#51C675" fill="#51C675" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: "#304C3A" }}>Verdiend</p>
+                    <p className="text-sm" style={{ color: "#5a6e62" }}>{selectedBadge.earnedDaysAgo} dagen geleden</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl mb-5" style={{ background: "#f5f8f5" }}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "#e0e0e0" }}>
+                    <Trophy size={16} color="#9aada2" strokeWidth={1.75} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold mb-0.5" style={{ color: "#304C3A" }}>Nog {earnedCount}/{DEMO_BADGES.length} badges verdiend</p>
+                    <p className="text-sm leading-snug" style={{ color: "#7a8f82" }}>Blijf de app gebruiken om deze badge te verdienen.</p>
+                  </div>
+                </div>
+              )}
+              {/* Progress bar */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium" style={{ color: "#9aada2" }}>Voortgang badges</span>
+                  <span className="text-xs font-semibold" style={{ color: "#304C3A" }}>{earnedCount}/{DEMO_BADGES.length}</span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#e8ede9" }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${(earnedCount / DEMO_BADGES.length) * 100}%`, background: "linear-gradient(90deg, #BDD2B7, #304C3A)" }}
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedBadge(null)}
+                className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white"
+                style={{ background: "#304C3A" }}
+              >
+                Sluiten
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1468,14 +1737,114 @@ export default function PresentatieDashboard({ username, sessionCode, openCompla
     setSelectedPostId(null);
   }
 
+  function DemoHomeBRC({ username, onNavigate }: { username: string; onNavigate: (s: DemoScreen) => void }) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex-shrink-0 px-5 pt-14 pb-5 bg-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="font-display text-[1.75rem] font-semibold leading-tight" style={{ color: "#122A1A" }}>
+                Hallo, {username}
+              </h1>
+              <p className="text-sm mt-0.5" style={{ color: "#7a8f82" }}>Welkom terug!</p>
+            </div>
+            <div className="p-2 rounded-full" style={{ background: "#f5f8f5" }}>
+              <Settings size={20} color="#304C3A" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 pb-6">
+          {/* Scan CTA */}
+          <div className="mb-7 mt-1">
+            <button
+              onClick={() => onNavigate("scan")}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-medium text-sm text-white"
+              style={{ background: "#304C3A" }}
+            >
+              <QrCode size={18} strokeWidth={1.75} />
+              Scan product
+            </button>
+          </div>
+
+          {/* Aanbevelingen */}
+          <div className="mb-7">
+            <h2 className="font-semibold text-base mb-3" style={{ color: "#122A1A" }}>Aanbevolen voor jou</h2>
+            <div className="flex flex-col gap-2.5">
+              {DEMO_PRODUCTS.slice(0, 2).map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center gap-3 p-3.5 rounded-2xl"
+                  style={{ background: "#EFF5EE", border: "1.5px solid #c8d9c2" }}
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: "rgba(48,76,58,0.12)" }}>
+                    🍫
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: "#122A1A" }}>{p.name}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#7a8f82" }}>{p.origin} · {p.cacaoPercentage}% cacao</p>
+                  </div>
+                  <span className="text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: "#304C3A", color: "#BDD2B7" }}>
+                    Nieuw
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mijn Producten */}
+          <div className="mb-7">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-base" style={{ color: "#122A1A" }}>Mijn Producten</h2>
+              <button onClick={() => onNavigate("producten")} className="text-sm font-medium" style={{ color: "#304C3A" }}>
+                Alles bekijken
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {DEMO_PRODUCTS.slice(0, 2).map((p, i) => (
+                <div key={p.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl" style={{ background: "#f5f8f5" }}>
+                  <span className="text-lg">🍫</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: "#122A1A" }}>{p.name}</p>
+                    <p className="text-xs" style={{ color: "#9aada2" }}>Gescand {["3 dagen", "1 week"][i]} geleden</p>
+                  </div>
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: "#EFF5EE", color: "#304C3A" }}>+10 pt</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Voortgang */}
+          <div>
+            <h2 className="font-semibold text-base mb-3" style={{ color: "#122A1A" }}>Jouw Voortgang</h2>
+            <div className="rounded-2xl p-4 flex items-center justify-between" style={{ background: "#f5f8f5" }}>
+              <div>
+                <p className="text-xs mb-1" style={{ color: "#7a8f82" }}>Totaal punten</p>
+                <p className="text-2xl font-semibold font-display" style={{ color: "#304C3A" }}>120</p>
+              </div>
+              <button onClick={() => onNavigate("profiel")} className="flex items-center gap-1 text-sm font-medium" style={{ color: "#304C3A" }}>
+                Bekijk badges <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function renderScreen() {
     // ── Home ──────────────────────────────────────────────────────────────────
+    // In renderScreen(), vervang het home-blok:
     if (screen === "home") {
       switch (role) {
-        case "B2C_CLIENT":       return <DashboardB2C firstName={username} points={120} />;
-        case "B2B_CLIENT":       return <DashboardB2B firstName={username} recentOrders={[]} />;
-        case "CUSTOMER_SERVICE": return <DashboardCustomerService firstName={username} openComplaints={openComplaints} activeChats={activeChats} />;
-        case "MARKETING":        return <DashboardMarketing firstName={username} />;
+        case "B2C_CLIENT":
+          return <DemoHomeBRC username={username} onNavigate={handleNavChange} />;
+        case "B2B_CLIENT":
+          return <DemoHomeB2B username={username} onNavigate={handleNavChange} />;
+        case "CUSTOMER_SERVICE":
+          return <DemoHomeCS username={username} openComplaints={openComplaints} activeChats={activeChats} onNavigate={handleNavChange} />;
+        case "MARKETING":
+          return <DemoHomeMarketing username={username} onNavigate={handleNavChange} />;
       }
     }
 
@@ -1521,6 +1890,7 @@ export default function PresentatieDashboard({ username, sessionCode, openCompla
     if (screen === "order_detail" && selectedOrderId) {
       return <OrderDetailScreen orderId={selectedOrderId} onBack={() => setScreen("orders")} />;
     }
+    if (screen === "analytics") return <AnalyticsScreen />;
 
     // ── B2B Catalogus ─────────────────────────────────────────────────────────
     if (screen === "catalogus") {
