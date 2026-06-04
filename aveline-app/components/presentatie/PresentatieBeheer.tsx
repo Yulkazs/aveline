@@ -6,6 +6,8 @@ import {
   Play, Square, Plus, Copy, Check, Users,
   Wifi, Trash2, ChevronDown, ChevronUp, QrCode, X, LogOut,
 } from "lucide-react";
+import MelkChocoladeBarcode from "@/components/presentatie/MelkChocoladeBarcode";
+
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type SessionStatus = "WAITING" | "ACTIVE" | "ENDED";
@@ -647,6 +649,12 @@ export default function PresentatieBeheer({ initialSessions }: Props) {
               ))
             )}
           </div>
+        </div>
+        <div className="mt-6">
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "#9aada2" }}>
+            Demo product
+          </p>
+          <MelkChocoladeBarcode />
         </div>
       </div>
 

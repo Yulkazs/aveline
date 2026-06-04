@@ -14,6 +14,8 @@ import DashboardB2C from "@/components/dashboard/DashboardB2C";
 import DashboardB2B from "@/components/dashboard/DashboardB2B";
 import DashboardCustomerService from "@/components/dashboard/DashboardCustomerService";
 import DashboardMarketing from "@/components/dashboard/DashboardMarketing";
+import PresentatieScanScreen from "@/components/presentatie/PresentatieScanScreen";
+
 
 import {
   DEMO_PRODUCTS,
@@ -230,31 +232,6 @@ function RoleSwitcher({ current, onChange }: { current: DemoRole; onChange: (rol
 // DEMO SCHERMEN
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ── Scan scherm ───────────────────────────────────────────────────────────────
-function ScanScreen() {
-  return (
-    <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-5 pb-20">
-      <div className="w-24 h-24 rounded-3xl flex items-center justify-center" style={{ background: "#EFF5EE" }}>
-        <QrCode size={40} color="#304C3A" strokeWidth={1.25} />
-      </div>
-      <div>
-        <p className="text-base font-semibold mb-1" style={{ color: "#304C3A" }}>QR Scanner</p>
-        <p className="text-sm leading-relaxed" style={{ color: "#9aada2" }}>
-          Scan een QR-code op een Avéline product om informatie, recepten en gamification-punten te ontvangen.
-        </p>
-      </div>
-      <div className="w-full rounded-2xl p-4 text-left" style={{ background: "#f5f8f5", border: "1.5px solid #e8ede9" }}>
-        <p className="text-xs font-semibold mb-2" style={{ color: "#304C3A" }}>Wat gebeurt er na scannen?</p>
-        {["Product details & certificeringen", "+10 gamification punten", "Persoonlijke aanbevelingen", "Klacht indienen optie"].map((item) => (
-          <div key={item} className="flex items-center gap-2 py-1">
-            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#51C675" }} />
-            <span className="text-xs" style={{ color: "#7a8f82" }}>{item}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ── Analytics scherm ─────────────────────────────────────────────────────────
 function AnalyticsScreen() {
@@ -2206,7 +2183,7 @@ function DemoHomeMarketing({ username, onNavigate }: { username: string; onNavig
     }
 
     // ── Overige ───────────────────────────────────────────────────────────────
-    if (screen === "scan")          return <ScanScreen />;
+    if (screen === "scan") return <PresentatieScanScreen />;
     if (screen === "profiel")       return <ProfielScreen username={username} />;
     if (screen === "notificaties")  return (
       <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-5 pb-20">
