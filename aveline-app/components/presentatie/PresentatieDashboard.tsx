@@ -7,7 +7,7 @@ import {
   BookOpen, ShoppingCart, BarChart2, AlertCircle, ChevronLeft,
   ChevronRight, Clock, CheckCircle2, Truck, XCircle, RefreshCw,
   Calendar, MapPin, Hash, Percent, Tag, Search, Send, Bot,
-  Star, Wifi, FileText, LogOut, X, Lock, Settings, TrendingUp, Trophy
+  Star, Wifi, FileText, LogOut, X, Lock, Settings, TrendingUp, Trophy, Bell
 } from "lucide-react";
 
 import DashboardB2C from "@/components/dashboard/DashboardB2C";
@@ -432,7 +432,76 @@ function ProfielScreen({ username }: { username: string }) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20">
-      {/* ... bestaande header + identiteitskaart ... */}
+      {/* Header */}
+      <div className="flex-shrink-0 px-5 pt-14 pb-5 border-b" style={{ borderColor: "#f0f0f0" }}>
+        <h1 className="font-display text-2xl font-semibold" style={{ color: "#122A1A" }}>Profiel</h1>
+      </div>
+
+      {/* Identiteitskaart */}
+      <div className="mx-5 mt-5 mb-5 rounded-3xl overflow-hidden" style={{ background: "#304C3A" }}>
+        <div className="px-5 pt-6 pb-5">
+          <div className="flex items-center gap-4 mb-5">
+            {/* Avatar */}
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold flex-shrink-0"
+              style={{ background: "rgba(255,255,255,0.12)", color: "#BDD2B7" }}
+            >
+              {username.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-lg font-semibold font-display" style={{ color: "#ffffff" }}>{username}</p>
+              <p className="text-xs mt-0.5" style={{ color: "rgba(189,210,183,0.7)" }}>B2C Klant · Lid sinds 2024</p>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#51C675", color: "#122A1A" }}>
+                  ✓ Geverifieerd
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Punten & badges samenvatting */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Punten",  value: "120" },
+              { label: "Scans",   value: "12"  },
+              { label: "Badges",  value: `${earnedCount}/${DEMO_BADGES.length}` },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-2xl py-2.5 flex flex-col items-center" style={{ background: "rgba(255,255,255,0.08)" }}>
+                <span className="text-base font-semibold font-display" style={{ color: "#ffffff" }}>{value}</span>
+                <span className="text-[10px] mt-0.5" style={{ color: "rgba(189,210,183,0.6)" }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Instellingen */}
+      <div className="px-5 mb-6">
+        <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "#9aada2" }}>Account</p>
+        <div className="flex flex-col gap-2">
+          {[
+            { icon: User,         label: "Persoonlijke gegevens", sub: "Naam, e-mail, adres"      },
+            { icon: Bell,         label: "Notificaties",          sub: "Pushberichten & e-mail"   },
+            { icon: Lock,         label: "Beveiliging",           sub: "Wachtwoord & privacy"     },
+            { icon: Settings,     label: "Voorkeuren",            sub: "Taal, thema, eenheden"    },
+          ].map(({ icon: Icon, label, sub }) => (
+            <div
+              key={label}
+              className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
+              style={{ background: "#f5f8f5", border: "1.5px solid #e8ede9" }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#EFF5EE" }}>
+                <Icon size={16} color="#304C3A" strokeWidth={1.75} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium" style={{ color: "#122A1A" }}>{label}</p>
+                <p className="text-[10px]" style={{ color: "#9aada2" }}>{sub}</p>
+              </div>
+              <ChevronRight size={14} color="#BDD2B7" />
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Badge sectie */}
       <div className="px-5 mb-6">
@@ -487,6 +556,17 @@ function ProfielScreen({ username }: { username: string }) {
         </div>
       </div>
 
+      {/* Uitloggen */}
+      <div className="px-5 mb-6">
+        <button
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold"
+          style={{ background: "#FEF2F2", color: "#DC2626", border: "1.5px solid #FECACA" }}
+        >
+          <LogOut size={15} strokeWidth={2} />
+          Uitloggen
+        </button>
+      </div>
+
       {/* Badge detail sheet */}
       {selectedBadge && (
         <div
@@ -537,7 +617,7 @@ function ProfielScreen({ username }: { username: string }) {
               ) : (
                 <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl mb-5" style={{ background: "#f5f8f5" }}>
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "#e0e0e0" }}>
-                    <Trophy size={16} color="#9aada2" strokeWidth={1.75} />
+                    <Star size={16} color="#9aada2" strokeWidth={1.75} />
                   </div>
                   <div>
                     <p className="text-xs font-semibold mb-0.5" style={{ color: "#304C3A" }}>Nog {earnedCount}/{DEMO_BADGES.length} badges verdiend</p>
@@ -545,7 +625,6 @@ function ProfielScreen({ username }: { username: string }) {
                   </div>
                 </div>
               )}
-              {/* Progress bar */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-medium" style={{ color: "#9aada2" }}>Voortgang badges</span>
