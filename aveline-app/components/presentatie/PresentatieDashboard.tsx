@@ -408,81 +408,45 @@ function ProfielScreen({ username }: { username: string }) {
   const earnedCount = DEMO_BADGES.filter(b => b.earned).length;
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-20">
+    <div className="flex flex-col h-full overflow-y-auto">
       {/* Header */}
-      <div className="flex-shrink-0 px-5 pt-14 pb-5 border-b" style={{ borderColor: "#f0f0f0" }}>
+      <div className="flex-shrink-0 flex items-center justify-between px-5 pt-14 pb-4">
         <h1 className="font-display text-2xl font-semibold" style={{ color: "#122A1A" }}>Profiel</h1>
+        <button className="p-2 rounded-full" style={{ background: "#f5f8f5" }} aria-label="Instellingen">
+          <Settings size={20} color="#304C3A" />
+        </button>
       </div>
 
-      {/* Identiteitskaart */}
-      <div className="mx-5 mt-5 mb-5 rounded-3xl overflow-hidden" style={{ background: "#304C3A" }}>
-        <div className="px-5 pt-6 pb-5">
-          <div className="flex items-center gap-4 mb-5">
-            {/* Avatar */}
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold flex-shrink-0"
-              style={{ background: "rgba(255,255,255,0.12)", color: "#BDD2B7" }}
-            >
-              {username.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-lg font-semibold font-display" style={{ color: "#ffffff" }}>{username}</p>
-              <p className="text-xs mt-0.5" style={{ color: "rgba(189,210,183,0.7)" }}>B2C Klant · Lid sinds 2024</p>
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#51C675", color: "#122A1A" }}>
-                  ✓ Geverifieerd
-                </span>
-              </div>
-            </div>
+      <div className="px-5 pb-8 flex flex-col gap-6">
+
+        {/* Identity card */}
+        <div className="rounded-2xl p-5 flex items-center gap-4" style={{ background: "#f5f8f5" }}>
+          <div
+            className="rounded-full flex items-center justify-center flex-shrink-0 font-semibold"
+            style={{ width: 60, height: 60, background: "#BDD2B7", color: "#304C3A", fontSize: 21 }}
+          >
+            {username.charAt(0).toUpperCase()}
           </div>
-
-          {/* Punten & badges samenvatting */}
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: "Punten",  value: "120" },
-              { label: "Scans",   value: "12"  },
-              { label: "Badges",  value: `${earnedCount}/${DEMO_BADGES.length}` },
-            ].map(({ label, value }) => (
-              <div key={label} className="rounded-2xl py-2.5 flex flex-col items-center" style={{ background: "rgba(255,255,255,0.08)" }}>
-                <span className="text-base font-semibold font-display" style={{ color: "#ffffff" }}>{value}</span>
-                <span className="text-[10px] mt-0.5" style={{ color: "rgba(189,210,183,0.6)" }}>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Instellingen */}
-      <div className="px-5 mb-6">
-        <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "#9aada2" }}>Account</p>
-        <div className="flex flex-col gap-2">
-          {[
-            { icon: User,         label: "Persoonlijke gegevens", sub: "Naam, e-mail, adres"      },
-            { icon: Bell,         label: "Notificaties",          sub: "Pushberichten & e-mail"   },
-            { icon: Lock,         label: "Beveiliging",           sub: "Wachtwoord & privacy"     },
-            { icon: Settings,     label: "Voorkeuren",            sub: "Taal, thema, eenheden"    },
-          ].map(({ icon: Icon, label, sub }) => (
-            <div
-              key={label}
-              className="flex items-center gap-3 px-4 py-3.5 rounded-2xl"
-              style={{ background: "#f5f8f5", border: "1.5px solid #e8ede9" }}
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-base truncate" style={{ color: "#122A1A" }}>{username}</p>
+            <p className="text-sm truncate mt-0.5" style={{ color: "#7a8f82" }}>klant@aveline.com</p>
+            <span
+              className="inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1.5"
+              style={{ background: "#e8f0e5", color: "#304C3A" }}
             >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#EFF5EE" }}>
-                <Icon size={16} color="#304C3A" strokeWidth={1.75} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium" style={{ color: "#122A1A" }}>{label}</p>
-                <p className="text-[10px]" style={{ color: "#9aada2" }}>{sub}</p>
-              </div>
-              <ChevronRight size={14} color="#BDD2B7" />
-            </div>
-          ))}
+              Klant
+            </span>
+          </div>
+          <button
+            className="flex-shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+            style={{ background: "#e8f0e5", color: "#304C3A" }}
+          >
+            Bewerken
+          </button>
         </div>
-      </div>
 
-      {/* Badge sectie */}
-      <div className="px-5 mb-6">
-        <div className="rounded-2xl p-4 flex items-center justify-between mb-4" style={{ background: "#304C3A" }}>
+        {/* Points + badges banner */}
+        <div className="rounded-2xl p-4 flex items-center justify-between" style={{ background: "#304C3A" }}>
           <div className="flex items-center gap-3">
             <Star size={18} color="#51C675" fill="#51C675" />
             <div>
@@ -498,48 +462,94 @@ function ProfielScreen({ username }: { username: string }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-base" style={{ color: "#122A1A" }}>Mijn Badges</h2>
-          <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: "#EFF5EE", color: "#304C3A" }}>
-            {earnedCount} verdiend
-          </span>
+        {/* Badges */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-base" style={{ color: "#122A1A" }}>Mijn Badges</h2>
+            <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: "#EFF5EE", color: "#304C3A" }}>
+              {earnedCount} verdiend
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {DEMO_BADGES.map((badge) => (
+              <button
+                key={badge.type}
+                onClick={() => setSelectedBadge(badge)}
+                className="flex flex-col items-center gap-2.5 p-4 rounded-2xl transition-all active:scale-95"
+                style={{ background: badge.earned ? "#EFF5EE" : "#f5f5f5" }}
+              >
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl relative"
+                  style={{ background: badge.earned ? "#304C3A" : "#e0e0e0", opacity: badge.earned ? 1 : 0.7 }}
+                >
+                  {badge.earned
+                    ? <span>{badge.emoji}</span>
+                    : <Lock size={20} color="#aaaaaa" strokeWidth={1.75} />
+                  }
+                  {badge.earned && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white" style={{ background: "#51C675" }} />
+                  )}
+                </div>
+                <span className="text-xs font-medium text-center leading-snug w-full" style={{ color: badge.earned ? "#304C3A" : "#aaaaaa" }}>
+                  {badge.name}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          {DEMO_BADGES.map((badge) => (
-            <button
-              key={badge.type}
-              onClick={() => setSelectedBadge(badge)}
-              className="flex flex-col items-center gap-2.5 p-4 rounded-2xl transition-all active:scale-95"
-              style={{ background: badge.earned ? "#EFF5EE" : "#f5f5f5" }}
-            >
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl relative"
-                style={{ background: badge.earned ? "#304C3A" : "#e0e0e0", opacity: badge.earned ? 1 : 0.7 }}
-              >
-                {badge.earned
-                  ? <span>{badge.emoji}</span>
-                  : <Lock size={20} color="#aaaaaa" strokeWidth={1.75} />
-                }
-                {badge.earned && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white" style={{ background: "#51C675" }} />
-                )}
+        {/* Statistieken */}
+        <div>
+          <h2 className="font-semibold text-base mb-3" style={{ color: "#122A1A" }}>Statistieken</h2>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: "Producten gescand", value: 1,  icon: QrCode },
+              { label: "Community posts",   value: 8,  icon: Users  },
+            ].map(({ label, value, icon: Icon }) => (
+              <div key={label} className="flex items-center gap-3 px-4 py-3.5 rounded-2xl" style={{ background: "#f5f8f5" }}>
+                <Icon size={16} color="#304C3A" strokeWidth={1.75} />
+                <span className="text-sm flex-1" style={{ color: "#304C3A" }}>{label}</span>
+                <span className="text-sm font-semibold" style={{ color: "#122A1A" }}>{value}</span>
               </div>
-              <span className="text-xs font-medium text-center leading-snug w-full" style={{ color: badge.earned ? "#304C3A" : "#aaaaaa" }}>
-                {badge.name}
-              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Account */}
+        <div>
+          <h2 className="font-semibold text-base mb-3" style={{ color: "#122A1A" }}>Account</h2>
+          <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "#e8ede9" }}>
+            <div className="flex items-center justify-between px-4 py-3.5 border-b" style={{ borderColor: "#e8ede9" }}>
+              <span className="text-sm" style={{ color: "#304C3A" }}>E-mailadres</span>
+              <span className="text-sm truncate max-w-[55%] text-right" style={{ color: "#7a8f82" }}>klant@aveline.com</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <span className="text-sm" style={{ color: "#304C3A" }}>Lid sinds</span>
+              <span className="text-sm" style={{ color: "#7a8f82" }}>mei 2026</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Instellingen / Notificaties */}
+        <div className="flex flex-col gap-2">
+          {["Instellingen", "Notificaties"].map((label) => (
+            <button
+              key={label}
+              className="flex items-center justify-between px-4 py-3.5 rounded-2xl border"
+              style={{ borderColor: "#e8ede9" }}
+            >
+              <span className="text-sm font-medium" style={{ color: "#304C3A" }}>{label}</span>
+              <ChevronRight size={16} color="#BDD2B7" />
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Uitloggen */}
-      <div className="px-5 mb-6">
+        {/* Uitloggen */}
         <button
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold"
-          style={{ background: "#FEF2F2", color: "#DC2626", border: "1.5px solid #FECACA" }}
+          className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl border font-medium text-sm"
+          style={{ color: "#dc2626", borderColor: "#fecaca", background: "#fff5f5" }}
         >
-          <LogOut size={15} strokeWidth={2} />
+          <LogOut size={16} />
           Uitloggen
         </button>
       </div>
@@ -565,10 +575,7 @@ function ProfielScreen({ username }: { username: string }) {
                 className="w-24 h-24 rounded-3xl flex items-center justify-center mb-4"
                 style={{ background: selectedBadge.earned ? "rgba(255,255,255,0.12)" : "#e0e0e0", fontSize: 44 }}
               >
-                {selectedBadge.earned
-                  ? <span>{selectedBadge.emoji}</span>
-                  : <Lock size={36} color="#b0b0b0" strokeWidth={1.5} />
-                }
+                {selectedBadge.earned ? <span>{selectedBadge.emoji}</span> : <Lock size={36} color="#b0b0b0" strokeWidth={1.5} />}
               </div>
               <span
                 className="text-xs font-semibold px-3 py-1 rounded-full mb-3"
@@ -594,10 +601,10 @@ function ProfielScreen({ username }: { username: string }) {
               ) : (
                 <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl mb-5" style={{ background: "#f5f8f5" }}>
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: "#e0e0e0" }}>
-                    <Star size={16} color="#9aada2" strokeWidth={1.75} />
+                    <Trophy size={16} color="#9aada2" strokeWidth={1.75} />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold mb-0.5" style={{ color: "#304C3A" }}>Nog {earnedCount}/{DEMO_BADGES.length} badges verdiend</p>
+                    <p className="text-xs font-semibold mb-0.5" style={{ color: "#304C3A" }}>Hoe te verdienen</p>
                     <p className="text-sm leading-snug" style={{ color: "#7a8f82" }}>Blijf de app gebruiken om deze badge te verdienen.</p>
                   </div>
                 </div>
