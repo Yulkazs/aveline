@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuth } from "@/lib/auth";
+import { getPresentationAuth } from "@/lib/presentationAuth";
 
 // ── GET /api/marketing/stats ──────────────────────────────────────────────────
 export async function GET() {
+  // Normale auth check
   const auth = await getAuth();
-  if (!auth) {
+
+  // Presentatie-deelnemers mogen ook lezen
+  const presentationAuth = !auth ? await getPresentationAuth() : null;
+
+  if (!auth && !presentationAuth) {
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
   }
 
@@ -23,17 +29,12 @@ export async function GET() {
     upcomingNotifications,
     recentPosts,
   ] = await Promise.all([
-    // Active = SCHEDULED with scheduledAt in the future, or no scheduledAt
     prisma.promotion.count({
       where: { status: "SCHEDULED" },
     }),
-
-    // Scheduled but not yet sent
     prisma.promotion.count({
       where: { status: "SCHEDULED", scheduledAt: { gt: now } },
     }),
-
-    // Sent this calendar month
     prisma.promotion.count({
       where: {
         status: "SENT",
@@ -42,21 +43,15 @@ export async function GET() {
         },
       },
     }),
-
-    // Upcoming planned notifications (not cancelled, in the future)
     prisma.plannedNotification.count({
       where: {
         isCancelled: false,
         scheduledAt: { gt: now },
       },
     }),
-
-    // Total community posts (not hidden)
     prisma.communityPost.count({
       where: { isHidden: false },
     }),
-
-    // Community posts this week
     prisma.communityPost.count({
       where: {
         isHidden: false,
@@ -65,11 +60,7 @@ export async function GET() {
         },
       },
     }),
-
-    // Total comments
     prisma.communityComment.count(),
-
-    // 5 most recent promotions for the feed
     prisma.promotion.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -84,8 +75,6 @@ export async function GET() {
         discountCode: true,
       },
     }),
-
-    // Next 3 upcoming planned notifications
     prisma.plannedNotification.findMany({
       where: { isCancelled: false, scheduledAt: { gt: now } },
       orderBy: { scheduledAt: "asc" },
@@ -98,8 +87,6 @@ export async function GET() {
         scheduledAt: true,
       },
     }),
-
-    // 3 most recent community posts for a quick view
     prisma.communityPost.findMany({
       where: { isHidden: false },
       orderBy: { createdAt: "desc" },
@@ -123,8 +110,8 @@ export async function GET() {
       recent: recentPromotions.map((p) => ({
         ...p,
         scheduledAt: p.scheduledAt?.toISOString() ?? null,
-        sentAt: p.sentAt?.toISOString() ?? null,
-        createdAt: p.createdAt.toISOString(),
+        sentAt:      p.sentAt?.toISOString() ?? null,
+        createdAt:   p.createdAt.toISOString(),
       })),
     },
     notifications: {
@@ -135,10 +122,10 @@ export async function GET() {
       })),
     },
     community: {
-      totalPosts: totalCommunityPosts,
-      postsThisWeek: communityPostsThisWeek,
-      totalComments: totalCommunityComments,
-      recentPosts: recentPosts.map((p) => ({
+      totalPosts:     totalCommunityPosts,
+      postsThisWeek:  communityPostsThisWeek,
+      totalComments:  totalCommunityComments,
+      recentPosts:    recentPosts.map((p) => ({
         ...p,
         createdAt: p.createdAt.toISOString(),
       })),

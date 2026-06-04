@@ -5,12 +5,9 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET ?? "aveline-dev-secret-change-in-production"
 );
 
-const PROTECTED   = ["/dashboard"];
-const AUTH_ONLY   = ["/login", "/register", "/welcome"];
+const PROTECTED    = ["/dashboard"];
+const AUTH_ONLY    = ["/login", "/register", "/welcome"];
 const GUEST_ROUTES = ["/scan", "/recepten", "/winkels"];
-
-// Presentatie-routes die volledig publiek zijn (geen enkele auth nodig)
-const PUBLIC_PRESENTATION = ["/presentatie"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -28,9 +25,6 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Presentatie join + wachtkamer: publiek ──────────────────────────────────
-  // /presentatie/[code]          → join pagina
-  // /presentatie/[code]/wachtkamer → wachtkamer
-  // Maar /presentatie/dashboard  → vereist presentatie-JWT (zie hieronder)
   if (
     pathname.startsWith("/presentatie/") &&
     !pathname.startsWith("/presentatie/dashboard")
@@ -43,7 +37,6 @@ export async function middleware(req: NextRequest) {
     const presentationToken = req.cookies.get("aveline_presentation_token")?.value;
 
     if (!presentationToken) {
-      // Geen token — stuur terug naar home
       return NextResponse.redirect(new URL("/", req.url));
     }
 
@@ -52,7 +45,6 @@ export async function middleware(req: NextRequest) {
       if (payload.role !== "PRESENTATION") throw new Error("Verkeerde rol");
       return NextResponse.next();
     } catch {
-      // Ongeldig token — cookie wissen en redirect
       const res = NextResponse.redirect(new URL("/", req.url));
       res.cookies.set("aveline_presentation_token", "", {
         httpOnly: true,
@@ -80,6 +72,24 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // ── Presentatie-deelnemers mogen ook /dashboard/* bezoeken ─────────────────
+  // Ze hebben geen aveline_token maar wel aveline_presentation_token.
+  // Daarmee mogen ze alle dashboard sub-routes bezoeken.
+  if (!isValid && pathname.startsWith("/dashboard")) {
+    const presentationToken = req.cookies.get("aveline_presentation_token")?.value;
+
+    if (presentationToken) {
+      try {
+        const { payload } = await jwtVerify(presentationToken, JWT_SECRET);
+        if (payload.role === "PRESENTATION") {
+          return NextResponse.next();
+        }
+      } catch {
+        // Ongeldig — val door naar normale redirect
+      }
+    }
+  }
+
   // ── Verifieer of gebruiker nog bestaat in DB (alleen voor /dashboard) ───────
   if (isValid && userId && pathname.startsWith("/dashboard")) {
     try {
@@ -102,7 +112,7 @@ export async function middleware(req: NextRequest) {
         return res;
       }
     } catch {
-      // DB down — laat door, dashboard handelt het zelf af
+      // DB down — laat door
     }
   }
 
@@ -133,6 +143,6 @@ export const config = {
     "/scan/:path*",
     "/recepten/:path*",
     "/winkels/:path*",
-    "/presentatie/:path*",   // ← nieuw
+    "/presentatie/:path*",
   ],
 };

@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, ShoppingBag, Building2, Headphones, Megaphone } from "lucide-react";
 import BottomNav from "@/components/dashboard/BottomNav";
 
-// Import the real dashboard components per role
 import DashboardB2C from "@/components/dashboard/DashboardB2C";
 import DashboardB2B from "@/components/dashboard/DashboardB2B";
 import DashboardCustomerService from "@/components/dashboard/DashboardCustomerService";
@@ -12,30 +11,6 @@ import DashboardMarketing from "@/components/dashboard/DashboardMarketing";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DemoRole = "B2C_CLIENT" | "B2B_CLIENT" | "CUSTOMER_SERVICE" | "MARKETING";
-
-type Complaint = {
-  id: string;
-  referenceNumber: string;
-  status: string;
-  priority: string;
-  type: string;
-  description: string;
-  createdAt: Date;
-  updatedAt: Date;
-  user: { firstName: string | null; lastName: string | null; email: string };
-  product: { name: string; batchNumber: string | null };
-};
-
-type Product = {
-  id: string;
-  name: string;
-  cacaoPercentage: number | null;
-  origin: string | null;
-  isPremium: boolean;
-  isLimitedEdition: boolean;
-  batchNumber: string | null;
-  category: string | null;
-};
 
 type Props = {
   username: string;
@@ -48,13 +23,13 @@ type Props = {
 const ROLES: Array<{
   key: DemoRole;
   label: string;
-  emoji: string;
+  icon: React.ElementType;
   description: string;
 }> = [
-  { key: "B2C_CLIENT",       label: "B2C Klant",      emoji: "🛍️", description: "Particuliere consument" },
-  { key: "B2B_CLIENT",       label: "B2B Klant",      emoji: "🏢", description: "Zakelijke afnemer"       },
-  { key: "CUSTOMER_SERVICE", label: "Klantenservice", emoji: "🎧", description: "CS medewerker"           },
-  { key: "MARKETING",        label: "Marketing",      emoji: "📣", description: "Marketing team"          },
+  { key: "B2C_CLIENT",       label: "B2C Klant",      icon: ShoppingBag, description: "Soulaimane & Hamza" },
+  { key: "B2B_CLIENT",       label: "B2B Klant",      icon: Building2,   description: "Omar"               },
+  { key: "CUSTOMER_SERVICE", label: "Klantenservice", icon: Headphones,  description: "Esad"               },
+  { key: "MARKETING",        label: "Marketing",      icon: Megaphone,   description: "Jessica"            },
 ];
 
 // ── Role switcher dropdown ─────────────────────────────────────────────────────
@@ -68,6 +43,7 @@ function RoleSwitcher({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const currentRole = ROLES.find((r) => r.key === current)!;
+  const CurrentIcon = currentRole.icon;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -87,7 +63,7 @@ function RoleSwitcher({
         className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all active:scale-95"
         style={{ background: open ? "#EFF5EE" : "#f5f8f5" }}
       >
-        <span className="text-base leading-none">{currentRole.emoji}</span>
+        <CurrentIcon size={15} color="#304C3A" strokeWidth={1.75} />
         <span className="text-xs font-semibold" style={{ color: "#122A1A" }}>
           {currentRole.label}
         </span>
@@ -104,7 +80,7 @@ function RoleSwitcher({
       {/* Dropdown */}
       {open && (
         <div
-          className="absolute right-0 top-full mt-2 w-56 rounded-2xl overflow-hidden border z-50"
+          className="absolute right-0 top-full mt-2 w-60 rounded-2xl overflow-hidden border z-50"
           style={{
             background: "#ffffff",
             borderColor: "#e8ede9",
@@ -122,6 +98,7 @@ function RoleSwitcher({
 
           {ROLES.map((role) => {
             const active = role.key === current;
+            const Icon = role.icon;
             return (
               <button
                 key={role.key}
@@ -132,7 +109,12 @@ function RoleSwitcher({
                   borderBottom: "1px solid #f8f8f8",
                 }}
               >
-                <span className="text-lg leading-none flex-shrink-0">{role.emoji}</span>
+                <div
+                  className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: active ? "#EFF5EE" : "#f5f8f5" }}
+                >
+                  <Icon size={15} color="#304C3A" strokeWidth={1.75} />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-sm font-semibold"
@@ -192,7 +174,7 @@ export default function PresentatieDashboard({
         <RoleSwitcher current={role} onChange={setRole} />
       </div>
 
-      {/* ── Dashboard content per role ─────────────────────────────── */}
+      {/* ── Dashboard content per rol ──────────────────────────────── */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {role === "B2C_CLIENT" && (
           <DashboardB2C firstName={username} points={120} />
