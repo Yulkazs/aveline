@@ -7,7 +7,7 @@ import {
   BookOpen, ShoppingCart, BarChart2, AlertCircle, ChevronLeft,
   ChevronRight, Clock, CheckCircle2, Truck, XCircle, RefreshCw,
   Calendar, MapPin, Hash, Percent, Tag, Search, Send, Bot,
-  Star, Wifi, FileText, LogOut, X, Lock, Settings
+  Star, Wifi, FileText, LogOut, X, Lock, Settings, TrendingUp, Trophy
 } from "lucide-react";
 
 import DashboardB2C from "@/components/dashboard/DashboardB2C";
@@ -18,6 +18,7 @@ import DashboardMarketing from "@/components/dashboard/DashboardMarketing";
 import {
   DEMO_PRODUCTS,
   DEMO_ORDERS,
+  DEMO_ANALYTICS_ORDERS,
   DEMO_COMPLAINTS,
   DEMO_CHAT_SESSIONS_B2C,
   DEMO_CHAT_SESSIONS_CS,
@@ -1831,6 +1832,223 @@ export default function PresentatieDashboard({ username, sessionCode, openCompla
       </div>
     );
   }
+  function DemoHomeB2B({ username, onNavigate }: { username: string; onNavigate: (s: DemoScreen) => void }) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 px-5 pt-14 pb-5 bg-white border-b" style={{ borderColor: "#f0f0f0" }}>
+        <h1 className="font-display text-[1.75rem] font-semibold leading-tight" style={{ color: "#122A1A" }}>
+          Hallo, {username}
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: "#7a8f82" }}>Zakelijk dashboard</p>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 pb-6 pt-5 flex flex-col gap-4">
+        {/* Snelle stats */}
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: "Lopende orders", value: DEMO_ORDERS.filter(o => ["PENDING","CONFIRMED","SHIPPED"].includes(o.status)).length, color: "#2563EB", bg: "#EFF6FF" },
+            { label: "Producten",      value: DEMO_PRODUCTS.length, color: "#304C3A", bg: "#EFF5EE" },
+          ].map(({ label, value, color, bg }) => (
+            <div key={label} className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: bg }}>
+              <span className="text-2xl font-semibold font-display" style={{ color }}>{value}</span>
+              <span className="text-xs" style={{ color: "#7a8f82" }}>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Snelkoppelingen */}
+        <div>
+          <h2 className="font-semibold text-base mb-3" style={{ color: "#122A1A" }}>Snelle toegang</h2>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: "Catalogus bekijken", screen: "catalogus" as DemoScreen, icon: BookOpen },
+              { label: "Bestellingen",       screen: "orders"    as DemoScreen, icon: ShoppingCart },
+              { label: "Analytics",          screen: "analytics" as DemoScreen, icon: BarChart2 },
+            ].map(({ label, screen, icon: Icon }) => (
+              <button
+                key={screen}
+                onClick={() => onNavigate(screen)}
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left active:scale-[0.99] transition-transform"
+                style={{ background: "#f5f8f5", border: "1.5px solid #e8ede9" }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#EFF5EE" }}>
+                  <Icon size={17} color="#304C3A" strokeWidth={1.75} />
+                </div>
+                <span className="text-sm font-medium flex-1" style={{ color: "#122A1A" }}>{label}</span>
+                <ChevronRight size={14} color="#BDD2B7" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Laatste bestelling */}
+        <div>
+          <h2 className="font-semibold text-base mb-3" style={{ color: "#122A1A" }}>Laatste bestelling</h2>
+          {(() => {
+            const latest = DEMO_ORDERS[0];
+            const meta = ORDER_STATUS_META[latest.status];
+            const Icon = meta.icon;
+            return (
+              <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "#ffffff", border: "1.5px solid #f0f0f0" }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: meta.bg }}>
+                  <Icon size={18} color={meta.color} strokeWidth={2} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: "#122A1A" }}>{latest.orderNumber}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#9aada2" }}>€{parseFloat(latest.totalAmount).toFixed(2)}</p>
+                </div>
+                <span className="text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoHomeCS({ username, openComplaints, activeChats, onNavigate }: {
+  username: string;
+  openComplaints: number;
+  activeChats: number;
+  onNavigate: (s: DemoScreen) => void;
+}) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 px-5 pt-14 pb-5 bg-white border-b" style={{ borderColor: "#f0f0f0" }}>
+        <h1 className="font-display text-[1.75rem] font-semibold leading-tight" style={{ color: "#122A1A" }}>
+          Hallo, {username}
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: "#7a8f82" }}>Klantenservice dashboard</p>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 pb-6 pt-5 flex flex-col gap-4">
+        {/* Live stats */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: "#FEF3C7" }}>
+            <span className="text-2xl font-semibold font-display" style={{ color: "#D97706" }}>{openComplaints || DEMO_COMPLAINTS.filter(c => c.status === "NEW").length}</span>
+            <span className="text-xs" style={{ color: "#7a8f82" }}>Open klachten</span>
+          </div>
+          <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ background: "#F0FDF4" }}>
+            <div className="flex items-center gap-1.5">
+              <span className="text-2xl font-semibold font-display" style={{ color: "#16A34A" }}>{activeChats || DEMO_CHAT_SESSIONS_CS.filter(s => s.isActive).length}</span>
+              <span className="w-2 h-2 rounded-full" style={{ background: "#22C55E", animation: "dot-pulse 1.5s infinite" }} />
+            </div>
+            <span className="text-xs" style={{ color: "#7a8f82" }}>Actieve chats</span>
+          </div>
+        </div>
+
+        {/* Snelkoppelingen */}
+        <div>
+          <h2 className="font-semibold text-base mb-3" style={{ color: "#122A1A" }}>Snelle toegang</h2>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: "Klachten beheren", screen: "klachten" as DemoScreen, icon: AlertCircle, badge: DEMO_COMPLAINTS.filter(c => c.status === "NEW").length },
+              { label: "Live chat",        screen: "chat"     as DemoScreen, icon: MessageCircle, badge: DEMO_CHAT_SESSIONS_CS.filter(s => s.isActive && !s.assignedAgent).length },
+              { label: "Community",        screen: "community"as DemoScreen, icon: Users, badge: 0 },
+            ].map(({ label, screen, icon: Icon, badge }) => (
+              <button
+                key={screen}
+                onClick={() => onNavigate(screen)}
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left active:scale-[0.99] transition-transform"
+                style={{ background: "#f5f8f5", border: "1.5px solid #e8ede9" }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#EFF5EE" }}>
+                  <Icon size={17} color="#304C3A" strokeWidth={1.75} />
+                </div>
+                <span className="text-sm font-medium flex-1" style={{ color: "#122A1A" }}>{label}</span>
+                {badge > 0 && (
+                  <span className="text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "#D97706", color: "#fff" }}>{badge}</span>
+                )}
+                <ChevronRight size={14} color="#BDD2B7" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoHomeMarketing({ username, onNavigate }: { username: string; onNavigate: (s: DemoScreen) => void }) {
+  const scheduled = DEMO_PROMOTIONS.filter(p => p.status === "SCHEDULED").length;
+  const sent      = DEMO_PROMOTIONS.filter(p => p.status === "SENT").length;
+  const draft     = DEMO_PROMOTIONS.filter(p => p.status === "DRAFT").length;
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 px-5 pt-14 pb-5 bg-white border-b" style={{ borderColor: "#f0f0f0" }}>
+        <h1 className="font-display text-[1.75rem] font-semibold leading-tight" style={{ color: "#122A1A" }}>
+          Hallo, {username}
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: "#7a8f82" }}>Marketing dashboard</p>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 pb-6 pt-5 flex flex-col gap-4">
+        {/* Campagne stats */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Gepland",   value: scheduled, color: "#2563EB", bg: "#EFF6FF" },
+            { label: "Verstuurd", value: sent,       color: "#16A34A", bg: "#F0FDF4" },
+            { label: "Concept",   value: draft,      color: "#7a8f82", bg: "#f5f8f5" },
+          ].map(({ label, value, color, bg }) => (
+            <div key={label} className="rounded-2xl p-3 flex flex-col gap-1" style={{ background: bg }}>
+              <span className="text-xl font-semibold font-display" style={{ color }}>{value}</span>
+              <span className="text-[10px]" style={{ color: "#7a8f82" }}>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Snelkoppelingen */}
+        <div>
+          <h2 className="font-semibold text-base mb-3" style={{ color: "#122A1A" }}>Snelle toegang</h2>
+          <div className="flex flex-col gap-2">
+            {[
+              { label: "Promoties beheren", screen: "promoties"  as DemoScreen, icon: Megaphone },
+              { label: "Community",         screen: "community"  as DemoScreen, icon: Users },
+            ].map(({ label, screen, icon: Icon }) => (
+              <button
+                key={screen}
+                onClick={() => onNavigate(screen)}
+                className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left active:scale-[0.99] transition-transform"
+                style={{ background: "#f5f8f5", border: "1.5px solid #e8ede9" }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#EFF5EE" }}>
+                  <Icon size={17} color="#304C3A" strokeWidth={1.75} />
+                </div>
+                <span className="text-sm font-medium flex-1" style={{ color: "#122A1A" }}>{label}</span>
+                <ChevronRight size={14} color="#BDD2B7" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Laatste promotie */}
+        <div>
+          <h2 className="font-semibold text-base mb-3" style={{ color: "#122A1A" }}>Laatste promotie</h2>
+          {(() => {
+            const latest = DEMO_PROMOTIONS[0];
+            const meta = { SENT: { color: "#16A34A", bg: "#F0FDF4" }, SCHEDULED: { color: "#2563EB", bg: "#EFF6FF" }, DRAFT: { color: "#7a8f82", bg: "#f5f8f5" } }[latest.status];
+            return (
+              <div className="rounded-2xl p-4" style={{ background: "#ffffff", border: "1.5px solid #f0f0f0" }}>
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <p className="text-sm font-semibold" style={{ color: "#122A1A" }}>{latest.title}</p>
+                  <span className="text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0" style={{ background: meta?.bg, color: meta?.color }}>
+                    {latest.status === "SENT" ? "Verstuurd" : latest.status === "SCHEDULED" ? "Gepland" : "Concept"}
+                  </span>
+                </div>
+                <p className="text-xs line-clamp-2" style={{ color: "#7a8f82" }}>{latest.body}</p>
+                {latest.discountCode && (
+                  <span className="inline-block mt-2 text-[10px] font-mono font-bold px-2 py-1 rounded-lg" style={{ background: "#EFF5EE", color: "#304C3A" }}>
+                    {latest.discountCode}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  );
+}
+  
 
   function renderScreen() {
     // ── Home ──────────────────────────────────────────────────────────────────
@@ -1911,19 +2129,6 @@ export default function PresentatieDashboard({ username, sessionCode, openCompla
     // ── Overige ───────────────────────────────────────────────────────────────
     if (screen === "scan")          return <ScanScreen />;
     if (screen === "profiel")       return <ProfielScreen username={username} />;
-    if (screen === "analytics")     return (
-      <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-5 pb-20">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "#EFF5EE" }}>
-          <BarChart2 size={28} color="#BDD2B7" strokeWidth={1.25} />
-        </div>
-        <div>
-          <p className="text-base font-semibold mb-1" style={{ color: "#304C3A" }}>Analytics</p>
-          <p className="text-sm leading-relaxed" style={{ color: "#9aada2" }}>
-            In de echte app zie je hier grafieken van bestellingen, omzet en meest bestelde producten over de afgelopen maanden.
-          </p>
-        </div>
-      </div>
-    );
     if (screen === "notificaties")  return (
       <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-5 pb-20">
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "#EFF5EE" }}>
