@@ -3,6 +3,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown, Check, ShoppingBag, Building2, Headphones, Megaphone, X } from "lucide-react";
 
+import {
+  DEMO_PRODUCTS,
+  DEMO_ORDERS,
+  DEMO_ANALYTICS_ORDERS,
+  DEMO_COMPLAINTS,
+  DEMO_CHAT_SESSIONS_B2C,
+  DEMO_CHAT_SESSIONS_CS,
+  DEMO_COMMUNITY_POSTS,
+  DEMO_PROMOTIONS,
+} from "@/lib/demoData";
+
 // Import all dashboard screens
 import DashboardB2C from "@/components/dashboard/DashboardB2C";
 import DashboardB2B from "@/components/dashboard/DashboardB2B";

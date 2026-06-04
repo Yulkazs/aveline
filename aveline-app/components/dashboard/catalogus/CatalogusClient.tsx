@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Plus,
   Package,
-  ShoppingCart,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -38,6 +37,21 @@ function primaryCert(certifications: string[]): string | null {
   return certifications[0];
 }
 
+const CATEGORY_TO_POSTER: Record<string, string> = {
+  melk:    "Milk",
+  fruit:   "Strawberry",
+  noot:    "Pistachio",
+  zomer:   "Summer",
+  puur:    "Summer",   // geen puur-poster, kies een fallback
+};
+
+function getPosterImage(category: string | null): string {
+  if (!category) return "";
+  const key = category.toLowerCase().trim();
+  const name = CATEGORY_TO_POSTER[key];
+  return name ? `/marketing/${name}ChocolatePoster1.png` : "";
+}
+
 // ── Product card ──────────────────────────────────────────────────────────────
 function ProductCard({
   product,
@@ -49,19 +63,32 @@ function ProductCard({
   onAdd: (e: React.MouseEvent) => void;
 }) {
   const cert = primaryCert(product.certifications);
+  const posterSrc = getPosterImage(product.category);
 
   return (
-    <button
+    <div
       onClick={onClick}
-      className="w-full text-left flex items-center gap-3 p-4 rounded-2xl active:scale-[0.99] transition-transform"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && onClick()}
+      className="w-full text-left flex items-center gap-3 p-4 rounded-2xl active:scale-[0.99] transition-transform cursor-pointer"
       style={{ background: "#ffffff", border: "1.5px solid #f0f0f0" }}
     >
       {/* Thumb */}
       <div
-        className="w-13 h-13 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl"
-        style={{ background: "#EFF5EE", width: 52, height: 52 }}
+        className="rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center"
+        style={{ width: 52, height: 52, background: "#EFF5EE" }}
       >
-        🍫
+        {posterSrc ? (
+          <img
+            src={posterSrc}
+            alt={product.name}
+            className="w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+          />
+        ) : (
+          <span className="text-2xl">🍫</span>
+        )}
       </div>
 
       {/* Body */}
@@ -122,7 +149,7 @@ function ProductCard({
         </button>
         <ChevronRight size={14} color="#BDD2B7" />
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -146,7 +173,6 @@ export default function CatalogusClient({ products, categories, onAddToCart }: P
   });
 
   const limitedCount = products.filter((p) => p.isLimitedEdition).length;
-  const premiumCount = products.filter((p) => p.isPremium).length;
 
   const handleAdd = (e: React.MouseEvent, product: Product) => {
     e.stopPropagation();
@@ -230,8 +256,8 @@ export default function CatalogusClient({ products, categories, onAddToCart }: P
       {/* Stats */}
       <div className="flex-shrink-0 px-5 py-4 grid grid-cols-2 gap-2">
         {[
-          { label: "Producten",      value: products.length, bg: "#EFF5EE", color: "#304C3A" },
-          { label: "Limited edition", value: limitedCount,   bg: "#F5F3FF", color: "#5B21B6" },
+          { label: "Producten",       value: products.length, bg: "#EFF5EE", color: "#304C3A" },
+          { label: "Limited edition", value: limitedCount,    bg: "#F5F3FF", color: "#5B21B6" },
         ].map(({ label, value, bg, color }) => (
           <div key={label} className="rounded-2xl p-3 flex flex-col" style={{ background: bg }}>
             <span className="text-xl font-semibold font-display" style={{ color }}>
@@ -259,7 +285,9 @@ export default function CatalogusClient({ products, categories, onAddToCart }: P
                 Geen producten gevonden
               </p>
               <p className="text-xs mt-1" style={{ color: "#9aada2" }}>
-                {search ? "Geen resultaten voor deze zoekopdracht." : "Er zijn nog geen producten beschikbaar."}
+                {search
+                  ? "Geen resultaten voor deze zoekopdracht."
+                  : "Er zijn nog geen producten beschikbaar."}
               </p>
             </div>
           </div>

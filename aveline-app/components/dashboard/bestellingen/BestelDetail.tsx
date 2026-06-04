@@ -252,10 +252,15 @@ export default function BestelDetail({ order }: Props) {
               style={{ background: "#EFF5EE" }}
             >
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
+                className="w-12 h-12 rounded-xl flex-shrink-0 overflow-hidden"
                 style={{ background: "rgba(48,76,58,0.12)" }}
               >
-                🍫
+                <img
+                  src={`/marketing/${item.product.origin ?? ''}ChocolatePoster1.png`}
+                  alt={item.product.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <p
